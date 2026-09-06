@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Suspense, cache } from "react";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import {
@@ -15,8 +14,8 @@ import {
   getProductsPage,
 } from "@/lib/supabase/queries";
 import { parseProductFilters, type FilterSearchParams } from "@/lib/types/filters";
-import { padCount } from "@/lib/utils/format";
 import { BrandHeader } from "@/components/brands/BrandHeader";
+import { VisitBrandButton } from "@/components/brands/VisitBrandButton";
 import { BrandHeaderSkeleton } from "@/components/brands/BrandHeaderSkeleton";
 import { ProductsExplorer } from "@/components/products/ProductsExplorer";
 import { ProductsExplorerSkeleton } from "@/components/products/ProductsExplorerSkeleton";
@@ -96,12 +95,10 @@ async function BrandProductsData({ params, searchParams }: BrandPageProps) {
 
   return (
     <div>
-      <div className="mono flex flex-wrap items-center justify-between gap-x-3.5 border-b border-line px-page py-1 text-text-3 md:py-[18px]">
-        <span className="whitespace-nowrap">Colección · {padCount(totalCount)} refs</span>
-        <Link href="/products" className="link-quiet flex min-h-hit items-center text-ink">
-          Todas las marcas <span aria-hidden>→</span>
-        </Link>
-      </div>
+      {/* Sin barra de "Colección · NN refs": el contador de resultados ya
+          vive en la barra sticky de filtros, justo debajo. En su lugar, el
+          CTA fijo a la web de la marca. */}
+      {brand.url ? <VisitBrandButton url={brand.url} brandName={brand.name} /> : null}
       <ProductsExplorer
         categoryTree={categoryTree}
         categories={categories}

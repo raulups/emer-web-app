@@ -57,7 +57,7 @@ export function CatalogHero({ products, totalProducts }: CatalogHeroProps) {
                 href={`/products/${product.id}${genderQuery}`}
                 className="group relative block aspect-[3/4] overflow-hidden bg-ink"
               >
-                <div className="photo-reveal absolute inset-0 transition-transform duration-zoom ease-zara group-hover:scale-[1.04]">
+                <div className="photo-zoom absolute inset-0 group-hover:scale-[1.04]">
                   {product.main_image_url ? (
                     <FadeInImage
                       src={product.main_image_url}

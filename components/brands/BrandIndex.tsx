@@ -97,7 +97,7 @@ export function BrandIndex({ brands }: BrandIndexProps) {
               className="group relative flex h-[clamp(260px,46vh,440px)] w-[clamp(300px,64vw,720px)] shrink-0 flex-col justify-end overflow-hidden bg-ink p-[clamp(14px,2vw,22px)] text-fg-inverse"
               aria-label={`${brand.name}: ver colección`}
             >
-              <div className="photo-reveal absolute inset-0 transition-transform duration-zoom ease-zara group-hover:scale-[1.05]">
+              <div className="photo-zoom absolute inset-0 group-hover:scale-[1.05]">
                 {brand.img ? (
                   <FadeInImage
                     src={brand.img}

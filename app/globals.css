@@ -241,9 +241,24 @@
   }
 
   /**
-   * Imagen que pasa de blanco y negro a color al hover del contenedor
-   * `.group` (el efecto del handoff con fotografía real). En dispositivos
-   * sin puntero se muestra ya en color: no hay hover que la revele.
+   * Zoom de imagen al hover del `.group`. SIN filtro de color: es la base
+   * que usan todas las imágenes de la app (producto, mosaico del hero,
+   * índice de marcas), donde la fotografía va siempre a color.
+   */
+  .photo-zoom {
+    transition: transform var(--dur-zoom) var(--ease);
+  }
+
+  /**
+   * Blanco y negro que pasa a color al hover del `.group`.
+   *
+   * EXCLUSIVA de las tarjetas de "El directorio" (BrandCard): ahí el gesto
+   * distingue el índice editorial de marcas del resto del catálogo. No
+   * reutilizar en producto ni en el índice horizontal — si hace falta el
+   * zoom sin el filtro, esa es `.photo-zoom`.
+   *
+   * En dispositivos sin puntero se muestra ya en color: no hay hover que
+   * la revele.
    */
   .photo-reveal {
     filter: grayscale(100%);

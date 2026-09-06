@@ -169,7 +169,9 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
               initial={{ opacity: 0, y: -PANEL_ENTER.y }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: DUR.base, ease: EASE }}
-              className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-[clamp(24px,5vw,44px)] overflow-y-auto px-page py-[clamp(24px,6vw,60px)]"
+              // `no-scrollbar`: el scroll sigue funcionando, pero sin la
+              // barra nativa del sistema encima del overlay negro.
+              className="no-scrollbar mx-auto flex w-full max-w-5xl flex-1 flex-col gap-[clamp(24px,5vw,44px)] overflow-y-auto px-page py-[clamp(24px,6vw,60px)]"
             >
               <div className="shrink-0 pt-[8vh]">
                 <input
@@ -188,7 +190,10 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
                   // sobre el overlay negro y no puede depender de heredar nada
                   // (la regla base de globals.css pinta los inputs en --fg
                   // sobre --bg). Placeholder al 60% de blanco: 4.6:1.
-                  className="display w-full border-0 border-b border-paper/25 bg-transparent pb-3.5 text-center text-fluid-search tracking-display text-fg-inverse caret-paper placeholder:text-paper/60 focus:bg-transparent focus:text-fg-inverse focus:outline-none focus-visible:border-paper"
+                  // El `text-fluid-search` (hasta 104px) es para lo que se
+                  // escribe; el placeholder baja a escala de interfaz con su
+                  // tracking mono, que a 104px era ilegible.
+                  className="display w-full border-0 border-b border-paper/25 bg-transparent pb-3.5 text-center text-fluid-search tracking-display text-fg-inverse caret-paper placeholder:text-[clamp(14px,3.5vw,20px)] placeholder:tracking-mono-wide placeholder:text-paper/60 focus:bg-transparent focus:text-fg-inverse focus:outline-none focus-visible:border-paper"
                 />
                 <p className="mono pt-4 text-center text-paper/70" aria-live="polite">
                   {hint}
@@ -227,13 +232,23 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
                               />
                             ) : null}
                           </span>
-                          <span className="display min-w-0 flex-1 truncate text-fluid-result tracking-[-0.05em]">
-                            {brand.name}
-                          </span>
-                          <span className="mono shrink-0 text-right text-paper/70">
-                            {[brand.is_emergent ? "Emergente" : null, domain]
-                              .filter(Boolean)
-                              .join(" · ")}
+                          {/* Prioridad de espacio: el nombre manda. En móvil
+                              la meta baja a su propia línea para que el nombre
+                              disponga del ancho completo y nunca se trunque ni
+                              se comprima (envuelve si hace falta); desde `sm`
+                              vuelven a la misma fila, donde el dominio ocupa
+                              lo que sobre y se corta, y el tipo es lo primero
+                              que desaparece al estrechar. */}
+                          <span className="flex min-w-0 flex-1 flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4">
+                            <span className="display break-words text-fluid-result tracking-[-0.05em]">
+                              {brand.name}
+                            </span>
+                            <span className="mono flex min-w-0 shrink items-baseline gap-2 text-paper/70 sm:justify-end sm:text-right">
+                              {brand.is_emergent ? (
+                                <span className="hidden shrink-0 sm:inline">Emergente</span>
+                              ) : null}
+                              {domain ? <span className="min-w-0 truncate">{domain}</span> : null}
+                            </span>
                           </span>
                         </button>
                       </motion.li>

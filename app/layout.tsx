@@ -29,10 +29,11 @@ const plexMono = IBM_Plex_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Catálogo de marcas",
-    template: "%s · Catálogo de marcas",
+    default: "Emer · Marcas de streetwear",
+    template: "%s · Emer",
   },
-  description: "Índice de marcas emergentes y su catálogo. Descubre aquí; compra en la web de cada marca.",
+  description:
+    "Descubre streetwear de marcas emergentes y compra sin recorrer decenas de webs: el catálogo de todas ellas en un único sitio.",
 };
 
 export default function RootLayout({

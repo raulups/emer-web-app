@@ -66,7 +66,8 @@ export function BrandCard({ brand, index = 0, variant = "full" }: BrandCardProps
         className={`group relative block overflow-hidden bg-subtle ${classes.box}`}
         aria-label={`${brand.name}: ver colección`}
       >
-        <div className="photo-reveal absolute inset-0 transition-transform duration-zoom ease-zara group-hover:scale-[1.05]">
+        {/* `.photo-reveal` (b/n -> color) solo aquí: ver app/globals.css. */}
+        <div className="photo-reveal absolute inset-0 group-hover:scale-[1.05]">
           {image ? (
             <FadeInImage
               src={image}

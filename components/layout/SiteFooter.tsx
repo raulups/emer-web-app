@@ -9,9 +9,7 @@ export function SiteFooter() {
   return (
     <footer className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,180px),1fr))] gap-8 border-t border-line bg-paper px-page pb-10 pt-section">
       <div className="display text-[clamp(26px,6vw,30px)] leading-[0.9] tracking-[-0.05em]">
-        Catálogo
-        <br />
-        ES
+        Emer
       </div>
       <div className="mono flex flex-col gap-2.5 text-text-3">
         <span>Venta directa de marca</span>

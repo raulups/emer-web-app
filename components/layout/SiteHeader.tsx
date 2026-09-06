@@ -43,7 +43,7 @@ export function SiteHeader() {
             href={`/${genderQuery}`}
             className="wordmark link-quiet flex min-h-hit items-center text-[clamp(14px,3.4vw,15px)] text-ink"
           >
-            Catálogo<span className="hidden md:inline">&nbsp;/&nbsp;ES</span>
+            Emer
           </Link>
 
           <div className="mono flex items-center gap-[clamp(6px,3vw,26px)]">
