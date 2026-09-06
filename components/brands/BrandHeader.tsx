@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Brand } from "@/lib/types";
+import { brandTagLabels } from "@/lib/types";
 import { domainOf, padCount } from "@/lib/utils/format";
 import { FadeInImage } from "@/components/ui/FadeInImage";
 
@@ -21,6 +22,7 @@ interface BrandHeaderProps {
 export function BrandHeader({ brand, productCount, position }: BrandHeaderProps) {
   const image = brand.img ?? brand.logo;
   const domain = domainOf(brand.url);
+  const labels = brandTagLabels(brand.tags);
 
   return (
     <header>
@@ -58,15 +60,17 @@ export function BrandHeader({ brand, productCount, position }: BrandHeaderProps)
           </h1>
           <div className="flex flex-col gap-4 pb-1.5">
             <p className="hidden max-w-[44ch] text-fluid-body leading-[1.65] text-paper/90 md:block">
-              {brand.is_emergent
-                ? "Marca emergente. Mantiene su propia dirección de arte y gestiona sus ventas en su web oficial."
-                : "Mantiene su propia dirección de arte y gestiona sus ventas en su web oficial."}
+              {labels.length > 0 ? `${labels.join(" · ")}. ` : ""}
+              Mantiene su propia dirección de arte y gestiona sus ventas en su web
+              oficial.
             </p>
             <div className="mono flex flex-wrap gap-[clamp(14px,3.5vw,26px)] border-t border-paper/30 pt-3 text-paper/80">
               <span>
                 {padCount(productCount)} {productCount === 1 ? "producto" : "productos"}
               </span>
-              {brand.is_emergent ? <span>Emergente</span> : null}
+              {labels.map((label) => (
+                <span key={label}>{label}</span>
+              ))}
               {brand.url && domain ? (
                 <a
                   href={brand.url}

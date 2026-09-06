@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Archivo, IBM_Plex_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import { AuthProvider } from "@/hooks/useUser";
 import { SearchOverlayProvider } from "@/hooks/useSearchOverlay";
 import { SiteHeader } from "@/components/layout/SiteHeader";
@@ -10,12 +11,26 @@ import { PageTransition } from "@/components/layout/PageTransition";
 import { RouteProgressBar } from "@/components/ui/RouteProgressBar";
 import "./globals.css";
 
-// --font-display / --font-ui: Archivo para todo — titulares en 900/800,
-// nombres de producto en 700, cuerpo en 400. Self-hosted por Next.
+// --font-brand: "Owned" (font/owned.woff2, convertida desde el .ttf
+// original, que se conserva como fuente de verdad).
+//
+// Variable propia y NO --font-display a propósito: se aplica solo al nombre
+// EMER del titular de la home, vía `.brand-wordmark`. Todo lo demás
+// —incluidos los otros titulares editoriales— sigue en Archivo.
+const owned = localFont({
+  src: "../font/owned.woff2",
+  weight: "400",
+  style: "normal",
+  variable: "--font-brand",
+  display: "swap",
+});
+
+// --font-ui (y --font-display, que lo aliasa en globals.css): Archivo para
+// titulares y todo el chrome de interfaz. Self-hosted por Next.
 const archivo = Archivo({
   subsets: ["latin"],
   weight: ["400", "700", "800", "900"],
-  variable: "--font-display",
+  variable: "--font-ui",
   display: "swap",
 });
 
@@ -41,10 +56,11 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // --font-ui se resuelve a --font-display en globals.css: una sola familia
-  // sans (Archivo) para chrome y titulares.
   return (
-    <html lang="es" className={`${archivo.variable} ${plexMono.variable}`}>
+    <html
+      lang="es"
+      className={`${owned.variable} ${archivo.variable} ${plexMono.variable}`}
+    >
       <body className="min-h-screen font-sans antialiased">
         {/* AuthProvider envuelve todo el árbol: el header y los controles de
             admin comparten una única sesión en vez de resolverla cada uno. */}

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import type { Brand } from "@/lib/types";
+import { brandTagLabels } from "@/lib/types";
 import { DUR, EASE, EASE_OUT, PANEL_ENTER, staggerDelay } from "@/lib/motion";
 import { domainOf, padCount } from "@/lib/utils/format";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
@@ -244,8 +245,10 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
                               {brand.name}
                             </span>
                             <span className="mono flex min-w-0 shrink items-baseline gap-2 text-paper/70 sm:justify-end sm:text-right">
-                              {brand.is_emergent ? (
-                                <span className="hidden shrink-0 sm:inline">Emergente</span>
+                              {brandTagLabels(brand.tags).length > 0 ? (
+                                <span className="hidden shrink-0 sm:inline">
+                                  {brandTagLabels(brand.tags).join(" · ")}
+                                </span>
                               ) : null}
                               {domain ? <span className="min-w-0 truncate">{domain}</span> : null}
                             </span>

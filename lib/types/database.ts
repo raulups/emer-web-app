@@ -48,11 +48,24 @@ export interface Database {
           img: string | null;
           logo: string | null;
           color: string | null;
+          /** @deprecated Sustituido por `tags`; se elimina en la limpieza de brand_priority.sql. */
           is_emergent: boolean | null;
+          tags: Database["public"]["Enums"]["brand_tag"][] | null;
+          /**
+           * Columna GENERADA por supabase/sql/brand_priority.sql a partir de
+           * `tags` (popular 1, emergente 2, novedad 3, resto 4). Es de solo
+           * lectura: Postgres la rechaza en INSERT/UPDATE, por eso se excluye
+           * de Insert/Update más abajo.
+           */
+          tag_priority: number;
           created_at: string;
         };
-        Insert: Partial<Database["public"]["Tables"]["brands"]["Row"]>;
-        Update: Partial<Database["public"]["Tables"]["brands"]["Row"]>;
+        Insert: Partial<
+          Omit<Database["public"]["Tables"]["brands"]["Row"], "tag_priority">
+        >;
+        Update: Partial<
+          Omit<Database["public"]["Tables"]["brands"]["Row"], "tag_priority">
+        >;
         Relationships: [];
       };
       categories: {
@@ -130,8 +143,23 @@ export interface Database {
         Relationships: [];
       };
     };
-    Views: Record<string, never>;
+    Views: {
+      /**
+       * `products` + la prioridad de tag de su marca, creada en
+       * supabase/sql/brand_priority.sql. Existe para poder ordenar el
+       * catálogo por esa prioridad sin añadir una columna redundante a
+       * `products` que habría que mantener sincronizada.
+       */
+      products_with_brand_priority: {
+        Row: Database["public"]["Tables"]["products"]["Row"] & {
+          brand_tag_priority: number;
+        };
+        Relationships: [];
+      };
+    };
     Functions: Record<string, never>;
-    Enums: Record<string, never>;
+    Enums: {
+      brand_tag: "popular" | "emergente" | "novedad";
+    };
   };
 }

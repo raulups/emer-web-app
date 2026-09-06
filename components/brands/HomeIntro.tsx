@@ -23,7 +23,8 @@ export function HomeIntro({ brands, totalProducts }: HomeIntroProps) {
           <p className="mono hidden tracking-mono-widest text-text-3 md:block">
             Marketplace de marcas emergentes
           </p>
-          <h1 className="display text-fluid-logo tracking-display-xl">Emer</h1>
+          {/* Único punto de la app con la tipografía "Owned". */}
+          <h1 className="brand-wordmark text-fluid-logo tracking-display-xl">Emer</h1>
         </div>
         {/* La descripción sí se ve en móvil: no es texto atmosférico, es lo
             que explica qué es esto a quien llega por primera vez. Lo que se

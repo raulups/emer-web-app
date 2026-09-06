@@ -41,10 +41,13 @@
   --text-5: #a8a8a2;
   --skeleton: var(--muted-bg);
 
-  /* Tipografía. --font-display y --font-mono las inyecta next/font en
-     app/layout.tsx; --font-ui es un alias porque el handoff usa Archivo
-     tanto para titulares como para todo el chrome de interfaz. */
-  --font-ui: var(--font-display);
+  /* Tipografía. next/font inyecta en app/layout.tsx:
+     --font-brand = "Owned" — SOLO el nombre EMER de la home,
+     --font-ui = Archivo — titulares y todo el chrome de interfaz,
+     --font-mono = IBM Plex Mono — etiquetas, precios, CTAs.
+     --font-display sigue siendo Archivo (alias de --font-ui): lo usan los
+     titulares editoriales, que NO llevan la tipografía de marca. */
+  --font-display: var(--font-ui);
   --ui-size-base: 14px;
   --ui-line-height: 1.5;
   --tracking-display: -0.055em;
@@ -161,7 +164,23 @@
 }
 
 @layer components {
-  /** Wordmark del header: Archivo 900 y tracking apretado. */
+  /**
+   * Tipografía de marca ("Owned"), EXCLUSIVA del nombre EMER del titular de
+   * la home. No usarla en ningún otro sitio: el resto de titulares van en
+   * `.display` (Archivo).
+   *
+   * Owned solo trae un peso (400); `font-synthesis-weight: none` evita que
+   * el navegador fabrique una negrita falsa si algo le pidiera más peso.
+   */
+  .brand-wordmark {
+    font-family: var(--font-brand), Helvetica, Arial, sans-serif;
+    font-weight: 400;
+    font-synthesis-weight: none;
+    text-transform: uppercase;
+    text-wrap: balance;
+  }
+
+  /** Wordmark del header y del pie: Archivo 900 y tracking apretado. */
   .wordmark {
     font-family: var(--font-display), Helvetica, Arial, sans-serif;
     font-weight: 900;
@@ -172,7 +191,7 @@
 
   /**
    * Titulares gigantes: Archivo 900 e interlineado por debajo de 1 para el
-   * apilado denso del handoff. El tracking lo pone cada tamaño.
+   * apilado denso. El tracking lo pone cada tamaño.
    */
   .display {
     font-family: var(--font-display), Helvetica, Arial, sans-serif;

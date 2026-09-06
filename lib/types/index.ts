@@ -3,6 +3,52 @@ import type { Database, Json } from "./database";
 export type { Json } from "./database";
 
 export type Brand = Database["public"]["Tables"]["brands"]["Row"];
+export type BrandTag = Database["public"]["Enums"]["brand_tag"];
+
+/**
+ * Los tres tags, listados en el mismo orden de prioridad que aplica
+ * `brand_tag_priority` en la base (popular 1, emergente 2, novedad 3). Ese
+ * orden es el que se ofrece en el formulario de admin, para que se lea como
+ * lo que es: una escala, no un conjunto suelto de etiquetas.
+ */
+export const BRAND_TAGS: { value: BrandTag; label: string }[] = [
+  { value: "popular", label: "Popular" },
+  { value: "emergente", label: "Emergente" },
+  { value: "novedad", label: "Novedad" },
+];
+
+/**
+ * Peso de cada tag en el orden del catálogo. Un número más bajo va antes.
+ * Sin ninguno de estos tags, la marca cae al 4.
+ */
+export const BRAND_TAG_PRIORITY: Record<BrandTag, number> = {
+  popular: 1,
+  emergente: 2,
+  novedad: 3,
+};
+
+/** Niveles posibles, en el orden en que se recorren. */
+export const BRAND_PRIORITY_LEVELS = [1, 2, 3, 4] as const;
+
+/**
+ * Prioridad de una marca: la más alta (número más bajo) de sus tags, como
+ * hace `min()` en SQL. Una marca con ["novedad","popular"] es prioridad 1.
+ */
+export function brandTagPriority(tags: BrandTag[] | null | undefined): number {
+  if (!tags || tags.length === 0) return 4;
+  const weights = tags.map((tag) => BRAND_TAG_PRIORITY[tag] ?? 4);
+  return Math.min(...weights);
+}
+
+export function isBrandTag(value: unknown): value is BrandTag {
+  return value === "popular" || value === "emergente" || value === "novedad";
+}
+
+/** Etiquetas legibles de una marca, en orden de prioridad. */
+export function brandTagLabels(tags: BrandTag[] | null | undefined): string[] {
+  if (!tags || tags.length === 0) return [];
+  return BRAND_TAGS.filter((tag) => tags.includes(tag.value)).map((tag) => tag.label);
+}
 export type Category = Database["public"]["Tables"]["categories"]["Row"];
 export type Product = Database["public"]["Tables"]["products"]["Row"];
 export type ProductPriceHistoryEntry =
@@ -47,6 +93,12 @@ export type ProductListItem = Pick<
   | "created_at"
 > & {
   brand: Pick<Brand, "id" | "name" | "color" | "logo"> | null;
+  /**
+   * Prioridad de tag de la marca (1 popular … 4 sin tag). La rellena
+   * `getProductsPage` al recorrer los grupos de prioridad; es opcional
+   * porque el detalle de producto no la necesita.
+   */
+  brand_tag_priority?: number;
 };
 
 /** Forma normalizada de `attributes` para renderizar como lista clave-valor. */

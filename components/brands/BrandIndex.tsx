@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { Brand } from "@/lib/types";
+import { brandTagLabels } from "@/lib/types";
 import { domainOf, padCount } from "@/lib/utils/format";
 import { FadeInImage } from "@/components/ui/FadeInImage";
 import { useGenderQueryString } from "@/hooks/useGenderQueryString";
@@ -88,7 +89,7 @@ export function BrandIndex({ brands }: BrandIndexProps) {
         aria-label="Índice de marcas"
       >
         {brands.map((brand, index) => {
-          const meta = brand.is_emergent ? "Emergente" : domainOf(brand.url);
+          const meta = brandTagLabels(brand.tags).join(" · ") || domainOf(brand.url);
           return (
             <Link
               key={brand.id}

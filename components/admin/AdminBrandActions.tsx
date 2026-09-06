@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/hooks/useUser";
 import { Toast } from "@/components/ui/Toast";
@@ -11,19 +12,20 @@ import { Toast } from "@/components/ui/Toast";
  * aun para ellas solo al abrir el panel, así que no tiene por qué pesar en la
  * carga inicial del listado de marcas que ve todo el mundo.
  */
-const CreateBrandModal = dynamic(
-  () => import("./CreateBrandModal").then((m) => m.CreateBrandModal),
+const BrandFormModal = dynamic(
+  () => import("./BrandFormModal").then((m) => m.BrandFormModal),
   { ssr: false },
 );
 
 /**
- * Punto de entrada de administración en el índice de marcas.
+ * Punto de entrada de administración en el índice de marcas: crear una
+ * marca aquí mismo, o ir al panel completo para editarlas.
  *
  * Se monta siempre (también para visitantes anónimos) y no pinta nada salvo
  * que `isAdmin` sea cierto — así la página sigue siendo un Server Component
  * estático y no hace falta leer cookies en el servidor para renderizarla.
- * Ocultar el botón es cosmético: quien autoriza de verdad es
- * `POST /api/brands`, que revalida el token y relee el rol en la base.
+ * Ocultar los botones es cosmético: quien autoriza de verdad son los
+ * endpoints, que revalidan el token y releen el rol en la base.
  */
 export function AdminBrandActions() {
   const { isAdmin } = useUser();
@@ -35,7 +37,7 @@ export function AdminBrandActions() {
 
   return (
     <>
-      {/* Bloque negro: el CTA del handoff. */}
+      {/* Bloque negro = acción que crea; borde = navegación al panel. */}
       <button
         type="button"
         onClick={() => setOpen(true)}
@@ -43,11 +45,17 @@ export function AdminBrandActions() {
       >
         <span aria-hidden>+</span> Crear marca
       </button>
+      <Link
+        href="/admin/brands"
+        className="mono flex min-h-hit shrink-0 items-center border border-ink px-4 text-ink transition-colors duration-fast ease-zara hover:bg-ink hover:text-fg-inverse"
+      >
+        Gestionar marcas
+      </Link>
 
-      <CreateBrandModal
+      <BrandFormModal
         open={open}
         onClose={() => setOpen(false)}
-        onCreated={(brandName) => {
+        onSaved={(brandName) => {
           setOpen(false);
           setToast(`Marca “${brandName}” creada`);
           // El endpoint ya ha llamado a revalidatePath("/"); esto es lo que

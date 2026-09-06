@@ -4,6 +4,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import type { Brand } from "@/lib/types";
 import { DUR, EASE, ENTER_Y, staggerDelay } from "@/lib/motion";
+import { brandTagLabels } from "@/lib/types";
 import { domainOf, padCount } from "@/lib/utils/format";
 import { FadeInImage } from "@/components/ui/FadeInImage";
 import { useGenderQueryString } from "@/hooks/useGenderQueryString";
@@ -51,7 +52,8 @@ export function BrandCard({ brand, index = 0, variant = "full" }: BrandCardProps
   const genderQuery = useGenderQueryString();
   const image = brand.img ?? brand.logo;
   const classes = VARIANT_CLASSES[variant];
-  const meta = [padCount(index + 1), brand.is_emergent ? "Emergente" : domainOf(brand.url)]
+  const labels = brandTagLabels(brand.tags);
+  const meta = [padCount(index + 1), labels.join(" · ") || domainOf(brand.url)]
     .filter(Boolean)
     .join(" — ");
 

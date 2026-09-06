@@ -1,34 +1,46 @@
 "use client";
 
 import { useRef, useState } from "react";
+import type { Brand, BrandTag } from "@/lib/types";
+import { BRAND_TAGS } from "@/lib/types";
 import { MAX_IMAGE_BYTES } from "@/lib/utils/upload";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { FileField } from "@/components/ui/FileField";
 
-interface CreateBrandFormProps {
-  /** Recibe el nombre de la marca creada, para el aviso de confirmación. */
-  onCreated: (brandName: string) => void;
+interface BrandFormProps {
+  /** Marca a editar. Sin ella, el formulario crea una nueva. */
+  brand?: Brand;
+  /** Recibe el nombre de la marca guardada, para el aviso de confirmación. */
+  onSaved: (brandName: string) => void;
   onCancel: () => void;
 }
 
 const HEX_COLOR = /^#[0-9a-f]{6}$/i;
 
 /**
- * Alta de marca. Envía `multipart/form-data` a `POST /api/brands` (no JSON,
- * porque el cuerpo lleva los ficheros de imagen) y deja que el servidor
- * suba a Storage con la service_role key: el navegador nunca ve esa clave ni
- * habla con Storage directamente.
+ * Alta y edición de marca en el mismo formulario: los campos, las reglas y
+ * el tratamiento de imágenes son idénticos, solo cambia el verbo HTTP
+ * (`POST /api/brands` o `PATCH /api/brands/[brandId]`).
+ *
+ * Envía `multipart/form-data` (no JSON, porque el cuerpo lleva ficheros) y
+ * deja que el servidor suba a Storage con la service_role key: el navegador
+ * nunca ve esa clave ni habla con Storage directamente.
+ *
+ * En edición, las imágenes actuales se muestran como vista previa pero NO
+ * se reenvían: solo viajan los ficheros que el admin reemplace, y el
+ * endpoint conserva las URLs existentes para los que no lleguen.
  *
  * La validación de aquí es solo comodidad —avisar antes de gastar una
- * subida—; la que manda es la del endpoint, que repite nombre, tamaño, tipo,
- * URL y color.
+ * subida—; la que manda es la del endpoint, que repite nombre, tamaño,
+ * tipo, URL, color y tags.
  */
-export function CreateBrandForm({ onCreated, onCancel }: CreateBrandFormProps) {
-  const [name, setName] = useState("");
-  const [url, setUrl] = useState("");
-  const [color, setColor] = useState("");
-  const [isEmergent, setIsEmergent] = useState(false);
+export function BrandForm({ brand, onSaved, onCancel }: BrandFormProps) {
+  const isEdit = Boolean(brand);
+  const [name, setName] = useState(brand?.name ?? "");
+  const [url, setUrl] = useState(brand?.url ?? "");
+  const [color, setColor] = useState(brand?.color ?? "");
+  const [tags, setTags] = useState<BrandTag[]>(brand?.tags ?? []);
   const [img, setImg] = useState<File | null>(null);
   const [logo, setLogo] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -36,6 +48,12 @@ export function CreateBrandForm({ onCreated, onCancel }: CreateBrandFormProps) {
   const nameRef = useRef<HTMLInputElement | null>(null);
 
   const hasFiles = Boolean(img || logo);
+
+  function toggleTag(tag: BrandTag) {
+    setTags((current) =>
+      current.includes(tag) ? current.filter((t) => t !== tag) : [...current, tag],
+    );
+  }
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -56,7 +74,8 @@ export function CreateBrandForm({ onCreated, onCancel }: CreateBrandFormProps) {
     body.set("name", trimmedName);
     body.set("url", url.trim());
     body.set("color", color);
-    body.set("is_emergent", String(isEmergent));
+    // Un campo `tags` por opción marcada; el servidor los lee con `getAll`.
+    for (const tag of tags) body.append("tags", tag);
     if (img) body.set("img", img);
     if (logo) body.set("logo", logo);
 
@@ -64,15 +83,18 @@ export function CreateBrandForm({ onCreated, onCancel }: CreateBrandFormProps) {
     try {
       // Sin cabecera Content-Type a propósito: el navegador la pone él con
       // el `boundary` del multipart, que no podemos calcular a mano.
-      const response = await fetch("/api/brands", { method: "POST", body });
+      const response = await fetch(
+        brand ? `/api/brands/${brand.id}` : "/api/brands",
+        { method: brand ? "PATCH" : "POST", body },
+      );
       const payload = await response.json().catch(() => null);
 
       if (!response.ok) {
-        setError(payload?.error ?? "No se ha podido crear la marca.");
+        setError(payload?.error ?? "No se ha podido guardar la marca.");
         return;
       }
 
-      onCreated(trimmedName);
+      onSaved(trimmedName);
     } catch {
       setError("No se ha podido conectar con el servidor. Inténtalo de nuevo.");
     } finally {
@@ -112,7 +134,13 @@ export function CreateBrandForm({ onCreated, onCancel }: CreateBrandFormProps) {
         />
       </div>
 
-      <FileField label="Imagen" value={img} onChange={setImg} maxBytes={MAX_IMAGE_BYTES} />
+      <FileField
+        label="Imagen"
+        value={img}
+        onChange={setImg}
+        maxBytes={MAX_IMAGE_BYTES}
+        initialPreviewUrl={brand?.img ?? null}
+      />
 
       <FileField
         label="Logo"
@@ -120,6 +148,7 @@ export function CreateBrandForm({ onCreated, onCancel }: CreateBrandFormProps) {
         onChange={setLogo}
         maxBytes={MAX_IMAGE_BYTES}
         aspect="aspect-square"
+        initialPreviewUrl={brand?.logo ?? null}
       />
 
       <div>
@@ -157,22 +186,36 @@ export function CreateBrandForm({ onCreated, onCancel }: CreateBrandFormProps) {
         </div>
       </div>
 
-      <div>
-        <span className="mono block text-text-3">Marca emergente</span>
-        <button
-          type="button"
-          onClick={() => setIsEmergent((value) => !value)}
-          aria-pressed={isEmergent}
-          className={`mono mt-2 flex min-h-hit items-center justify-between gap-2.5 border px-3 transition-colors duration-fast ease-zara sm:min-w-[160px] ${
-            isEmergent
-              ? "border-ink bg-ink text-fg-inverse"
-              : "border-line text-ink hover:border-ink"
-          }`}
-        >
-          <span>{isEmergent ? "Sí" : "No"}</span>
-          <span aria-hidden>{isEmergent ? "●" : ""}</span>
-        </button>
-      </div>
+      <fieldset>
+        <legend className="mono block text-text-3">Tags</legend>
+        {/* Selección múltiple. El orden es el de prioridad de catálogo
+            (popular → emergente → novedad), y se recuerda debajo porque de
+            estos tags depende el orden en que se ven las marcas. */}
+        <div className="mt-2 flex flex-wrap gap-2">
+          {BRAND_TAGS.map((tag) => {
+            const active = tags.includes(tag.value);
+            return (
+              <button
+                key={tag.value}
+                type="button"
+                onClick={() => toggleTag(tag.value)}
+                aria-pressed={active}
+                className={`mono flex min-h-hit items-center gap-2.5 border px-3 transition-colors duration-fast ease-zara ${
+                  active
+                    ? "border-ink bg-ink text-fg-inverse"
+                    : "border-line text-ink hover:border-ink"
+                }`}
+              >
+                <span>{tag.label}</span>
+                <span aria-hidden>{active ? "●" : ""}</span>
+              </button>
+            );
+          })}
+        </div>
+        <p className="mono mt-2 text-text-3">
+          Ordena el catálogo: popular va primero, luego emergente y novedad.
+        </p>
+      </fieldset>
 
       {error ? (
         <p role="alert" className="border-l border-ink pl-3 text-ui text-ink">
@@ -189,7 +232,9 @@ export function CreateBrandForm({ onCreated, onCancel }: CreateBrandFormProps) {
             ? hasFiles
               ? "Subiendo imágenes…"
               : "Guardando…"
-            : "Crear marca"}
+            : isEdit
+              ? "Guardar cambios"
+              : "Crear marca"}
           {!submitting ? <span aria-hidden>→</span> : null}
         </Button>
       </div>

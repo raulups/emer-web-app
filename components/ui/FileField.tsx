@@ -11,6 +11,12 @@ interface FileFieldProps {
   maxBytes: number;
   /** Proporción del recuadro de vista previa. */
   aspect?: string;
+  /**
+   * Imagen ya guardada (edición): se muestra como vista previa mientras no
+   * se elija un fichero nuevo. No se reenvía al servidor — solo viajan los
+   * ficheros que el admin reemplace de verdad.
+   */
+  initialPreviewUrl?: string | null;
 }
 
 /**
@@ -31,23 +37,27 @@ export function FileField({
   onChange,
   maxBytes,
   aspect = "aspect-[4/5]",
+  initialPreviewUrl = null,
 }: FileFieldProps) {
   const inputId = useId();
   const inputRef = useRef<HTMLInputElement | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [objectUrl, setObjectUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const maxMb = Math.round(maxBytes / 1024 / 1024);
 
   useEffect(() => {
     if (!value) {
-      setPreviewUrl(null);
+      setObjectUrl(null);
       return;
     }
 
     const url = URL.createObjectURL(value);
-    setPreviewUrl(url);
+    setObjectUrl(url);
     return () => URL.revokeObjectURL(url);
   }, [value]);
+
+  // El fichero recién elegido manda sobre la imagen ya guardada.
+  const previewUrl = objectUrl ?? initialPreviewUrl;
 
   function reject(message: string) {
     // Vaciar también el input nativo al rechazar, no solo el estado: si no,
@@ -114,7 +124,7 @@ export function FileField({
             htmlFor={inputId}
             className="mono inline-flex min-h-hit cursor-pointer items-center border border-ink px-4 py-2 text-ink transition-colors duration-fast ease-zara hover:bg-ink hover:text-fg-inverse peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-fg"
           >
-            {value ? "Cambiar" : "Elegir imagen"}
+            {value || initialPreviewUrl ? "Cambiar" : "Elegir imagen"}
           </label>
 
           {value ? (
@@ -131,7 +141,9 @@ export function FileField({
               </button>
             </div>
           ) : (
-            <p className="mono mt-3 text-text-3">Opcional · máx. {maxMb} MB</p>
+            <p className="mono mt-3 text-text-3">
+              {initialPreviewUrl ? "Imagen actual · " : "Opcional · "}máx. {maxMb} MB
+            </p>
           )}
 
           {error ? (

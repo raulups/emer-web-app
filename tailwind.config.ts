@@ -49,6 +49,7 @@ const config: Config = {
         muted: "var(--text-4)",
       },
       fontFamily: {
+        brand: ["var(--font-brand)", "Helvetica", "Arial", "sans-serif"],
         display: ["var(--font-display)", "Helvetica", "Arial", "sans-serif"],
         sans: ["var(--font-ui)", "Helvetica", "Arial", "sans-serif"],
         ui: ["var(--font-ui)", "Helvetica", "Arial", "sans-serif"],

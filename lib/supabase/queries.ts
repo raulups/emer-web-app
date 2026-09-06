@@ -4,11 +4,11 @@ import type {
   Brand,
   Category,
   CategoryNode,
-  Product,
   ProductListItem,
   ProductPriceHistoryEntry,
   ProductWithRelations,
 } from "@/lib/types";
+import { BRAND_PRIORITY_LEVELS, brandTagPriority } from "@/lib/types";
 import type { ProductFilters } from "@/lib/types/filters";
 
 // Sin `server-only`: estas funciones solo reciben un cliente Supabase ya
@@ -63,15 +63,34 @@ const GENDER_OR_FILTER: Record<"woman" | "man", string> = {
   ].join(","),
 };
 
-/** Todas las marcas, ordenadas alfabéticamente. */
+/**
+ * Todas las marcas, ordenadas por prioridad de tag (popular → emergente →
+ * novedad → sin tag) y, dentro de cada grupo, de más reciente a más antigua.
+ *
+ * El orden se resuelve EN LA APLICACIÓN, no en SQL: `tags` es un array de
+ * enum y PostgREST no sabe ordenar por una expresión sobre él. Son ~30 filas
+ * que ya se traen enteras, así que ordenarlas aquí no cuesta nada y evita
+ * depender de una columna generada en la base. El desempate final por `id`
+ * mantiene estable el orden entre marcas creadas en el mismo instante (los
+ * lotes de alta comparten `created_at`).
+ */
 export async function getBrands(client: Client): Promise<Brand[]> {
-  const { data, error } = await client
-    .from("brands")
-    .select("*")
-    .order("name", { ascending: true });
+  const { data, error } = await client.from("brands").select("*");
 
   if (error) throw new Error(`Error al cargar marcas: ${error.message}`);
-  return data ?? [];
+
+  return (data ?? []).slice().sort(compareBrandsByPriority);
+}
+
+/** popular → emergente → novedad → sin tag; luego más reciente; luego id. */
+function compareBrandsByPriority(a: Brand, b: Brand): number {
+  const priority = brandTagPriority(a.tags) - brandTagPriority(b.tags);
+  if (priority !== 0) return priority;
+
+  const recency = b.created_at.localeCompare(a.created_at);
+  if (recency !== 0) return recency;
+
+  return a.id.localeCompare(b.id);
 }
 
 /** Una marca por id, o null si no existe. */
@@ -159,78 +178,91 @@ export interface ProductsPageResult {
 export const DEFAULT_PAGE_SIZE = 48;
 
 /**
- * Aplica los filtros combinables de producto (marca, categoría, precio,
- * disponibilidad, oferta, búsqueda) a una query ya iniciada con `.from("products")`.
- * Se usa tanto para paginar como para contar, así que no toca `.order`/`.range`.
- *
- * Nota: se repite (en vez de compartirse vía un helper genérico) el pequeño
- * bloque de condicionales en `getProductsPage`/`getProductsCount` porque el
- * tipo del builder de supabase-js encadena genéricos distintos según el
- * `select()` de partida (con o sin `head`), y forzar un tipo compartido es
- * más frágil que la duplicación de ~8 líneas.
+ * Ámbito de una consulta de productos. `brandIds` sustituye por completo a
+ * `filters.brandId`/`filters.brandIds` cuando se recorre un grupo de
+ * prioridad concreto.
  */
+interface ProductScope {
+  filters: ProductFilters;
+  categoryIds?: string[];
+  brandIds?: string[];
+}
 
 /**
- * Página de productos filtrados/ordenados, con la marca embebida y solo las
- * columnas necesarias para el grid. Usa `range()` para paginar; pide una fila
- * extra para saber si hay más sin necesitar un count aparte.
+ * Aplica el filtro de marca del ámbito. Se separa porque es el único que
+ * cambia entre la consulta normal y la de un grupo de prioridad.
  */
-export async function getProductsPage(
-  client: Client,
-  filters: ProductFilters,
-  categoryIds: string[] | undefined,
-  pagination: ProductPagination,
-): Promise<ProductsPageResult> {
-  const from = pagination.page * pagination.pageSize;
-  const to = from + pagination.pageSize; // +1 fila para detectar hasMore
+function brandFilterOf(scope: ProductScope): { column: "brand_id"; ids: string[] } | { column: "brand_id"; id: string } | null {
+  if (scope.brandIds) return { column: "brand_id", ids: scope.brandIds };
+  if (scope.filters.brandId) return { column: "brand_id", id: scope.filters.brandId };
+  if (scope.filters.brandIds && scope.filters.brandIds.length > 0) {
+    return { column: "brand_id", ids: scope.filters.brandIds };
+  }
+  return null;
+}
 
-  let query = client.from("products").select(PRODUCT_LIST_SELECT).range(from, to);
+/**
+ * Filtros combinables de producto (marca, categoría, precio, disponibilidad,
+ * oferta, búsqueda, género). No toca `.order`/`.range`.
+ *
+ * El builder se tipa como `any` a propósito: supabase-js encadena genéricos
+ * distintos según el `select()` de partida (con o sin `head`), y compartir
+ * un tipo entre ambos casos es más frágil que este único punto sin tipar,
+ * que además está encapsulado aquí dentro.
+ */
+function applyProductFilters<Q>(query: Q, scope: ProductScope): Q {
+  const { filters, categoryIds } = scope;
+  let q = query as any;
 
-  if (filters.brandId) {
-    query = query.eq("brand_id", filters.brandId);
-  } else if (filters.brandIds && filters.brandIds.length > 0) {
-    query = query.in("brand_id", filters.brandIds);
+  const brand = brandFilterOf(scope);
+  if (brand) {
+    q = "ids" in brand ? q.in(brand.column, brand.ids) : q.eq(brand.column, brand.id);
   }
   if (categoryIds && categoryIds.length > 0) {
-    query = query.in("category_id", categoryIds);
+    q = q.in("category_id", categoryIds);
   } else if (filters.categoryId) {
-    query = query.eq("category_id", filters.categoryId);
+    q = q.eq("category_id", filters.categoryId);
   }
   if (typeof filters.minPrice === "number") {
-    query = query.gte("current_price", filters.minPrice);
+    q = q.gte("current_price", filters.minPrice);
   }
   if (typeof filters.maxPrice === "number") {
-    query = query.lte("current_price", filters.maxPrice);
+    q = q.lte("current_price", filters.maxPrice);
   }
   if (typeof filters.available === "boolean") {
-    query = query.eq("available", filters.available);
+    q = q.eq("available", filters.available);
   }
   if (typeof filters.onSale === "boolean") {
-    query = query.eq("is_on_sale", filters.onSale);
+    q = q.eq("is_on_sale", filters.onSale);
   }
   if (filters.search) {
-    query = query.ilike("name", `%${filters.search}%`);
+    q = q.ilike("name", `%${filters.search}%`);
   }
   if (filters.gender) {
-    query = query.or(GENDER_OR_FILTER[filters.gender]);
+    q = q.or(GENDER_OR_FILTER[filters.gender]);
   }
+  return q as Q;
+}
 
-  switch (filters.sort) {
+/** Orden del criterio elegido en el selector, dentro de un mismo grupo. */
+function applyProductOrder<Q>(query: Q, sort: ProductFilters["sort"]): Q {
+  let q = query as any;
+  switch (sort) {
     case "price_asc":
-      query = query.order("current_price", { ascending: true, nullsFirst: true });
+      q = q.order("current_price", { ascending: true, nullsFirst: true });
       break;
     case "price_desc":
-      query = query.order("current_price", { ascending: false, nullsFirst: false });
+      q = q.order("current_price", { ascending: false, nullsFirst: false });
       break;
     case "name_asc":
-      query = query.order("name", { ascending: true });
+      q = q.order("name", { ascending: true });
       break;
     case "name_desc":
-      query = query.order("name", { ascending: false });
+      q = q.order("name", { ascending: false });
       break;
     case "newest":
     default:
-      query = query.order("created_at", { ascending: false });
+      q = q.order("created_at", { ascending: false });
       break;
   }
   // Desempate por `id` (única, PK): sin esto, filas con el mismo
@@ -239,17 +271,139 @@ export async function getProductsPage(
   // páginas, y `range()` puede devolver el mismo producto dos veces o
   // saltarse alguno al paginar. Verificado contra la tabla real: sin este
   // desempate, page0/page1 de 10 filas cada una llegaban a solaparse en 7.
-  query = query.order("id", { ascending: true });
+  return q.order("id", { ascending: true }) as Q;
+}
 
-  const { data, error } = await query;
+/** Un tramo de productos del ámbito dado. */
+async function fetchProducts(
+  client: Client,
+  scope: ProductScope,
+  offset: number,
+  limit: number,
+): Promise<ProductListItem[]> {
+  let query = client.from("products").select(PRODUCT_LIST_SELECT);
+  query = applyProductFilters(query, scope);
+  query = applyProductOrder(query, scope.filters.sort);
+
+  const { data, error } = await query.range(offset, offset + limit - 1);
   if (error) throw new Error(`Error al cargar productos: ${error.message}`);
+  return (data ?? []) as unknown as ProductListItem[];
+}
 
-  const rows = (data ?? []) as unknown as ProductListItem[];
-  const hasMore = rows.length > pagination.pageSize;
-  return {
-    items: hasMore ? rows.slice(0, pagination.pageSize) : rows,
-    hasMore,
-  };
+/** Nº de productos del ámbito dado. */
+async function countProducts(client: Client, scope: ProductScope): Promise<number> {
+  const query = applyProductFilters(
+    client.from("products").select("id", { count: "exact", head: true }),
+    scope,
+  );
+
+  const { count, error } = await query;
+  if (error) throw new Error(`Error al contar productos: ${error.message}`);
+  // Esta consulta va por HEAD y ahí supabase-js entrega algunos fallos como
+  // `{ count: null, error: null }`: un recuento correcto siempre trae un
+  // número, así que un null es un fallo silencioso, no un cero.
+  if (count === null) {
+    throw new Error("Error al contar productos: la respuesta no incluyó el recuento.");
+  }
+  return count;
+}
+
+/**
+ * Ids de marca agrupados por prioridad de tag, en orden (popular primero).
+ * Los grupos vacíos se descartan. Si el usuario ha filtrado por marcas
+ * concretas, solo se consideran esas.
+ */
+async function getBrandPriorityGroups(
+  client: Client,
+  onlyBrandIds?: string[],
+): Promise<{ priority: number; brandIds: string[] }[]> {
+  const { data, error } = await client.from("brands").select("id, tags");
+  if (error) throw new Error(`Error al cargar marcas: ${error.message}`);
+
+  const allowed =
+    onlyBrandIds && onlyBrandIds.length > 0 ? new Set(onlyBrandIds) : null;
+
+  return BRAND_PRIORITY_LEVELS.map((priority) => ({
+    priority,
+    brandIds: (data ?? [])
+      .filter((brand) => !allowed || allowed.has(brand.id))
+      .filter((brand) => brandTagPriority(brand.tags) === priority)
+      .map((brand) => brand.id),
+  })).filter((group) => group.brandIds.length > 0);
+}
+
+/**
+ * Página de productos filtrados/ordenados, con la marca embebida y solo las
+ * columnas necesarias para el grid.
+ *
+ * Con el criterio por defecto ("Más recientes") el catálogo se ordena por
+ * PRIORIDAD DE TAG DE LA MARCA: primero todos los productos de marcas
+ * `popular`, luego `emergente`, luego `novedad` y por último las marcas sin
+ * tag; dentro de cada grupo, lo más reciente primero.
+ *
+ * Ese orden no se puede pedir a PostgREST en una sola consulta —no sabe
+ * ordenar la tabla padre por una columna de la tabla embebida—, así que se
+ * recorren los grupos en orden y se pagina a través de ellos: para la
+ * ventana [from, from+pageSize] se cuenta cada grupo hasta encontrar dónde
+ * cae, y se piden solo las filas necesarias. En la práctica casi todas las
+ * páginas se resuelven dentro del primer grupo (1 recuento + 1 consulta).
+ *
+ * Los demás criterios del selector (precio, nombre) ordenan solo por su
+ * campo, sin agrupar por prioridad, así que van por el camino directo.
+ */
+export async function getProductsPage(
+  client: Client,
+  filters: ProductFilters,
+  categoryIds: string[] | undefined,
+  pagination: ProductPagination,
+): Promise<ProductsPageResult> {
+  const from = pagination.page * pagination.pageSize;
+  const need = pagination.pageSize + 1; // fila extra para detectar hasMore
+
+  // Con una marca fija (/brands/[brandId]) todos los productos comparten
+  // prioridad, así que agrupar no aportaría nada.
+  const groupByPriority = filters.sort === "newest" && !filters.brandId;
+
+  if (!groupByPriority) {
+    const rows = await fetchProducts(client, { filters, categoryIds }, from, need);
+    return toPageResult(rows, pagination.pageSize);
+  }
+
+  const groups = await getBrandPriorityGroups(client, filters.brandIds);
+  const items: ProductListItem[] = [];
+  let consumed = 0; // filas de los grupos ya recorridos por completo
+
+  for (const group of groups) {
+    if (items.length >= need) break;
+
+    const scope: ProductScope = { filters, categoryIds, brandIds: group.brandIds };
+    const total = await countProducts(client, scope);
+    if (total === 0) continue;
+
+    // La ventana empieza después de este grupo entero: se salta.
+    if (from >= consumed + total) {
+      consumed += total;
+      continue;
+    }
+
+    const rows = await fetchProducts(
+      client,
+      scope,
+      Math.max(0, from - consumed),
+      need - items.length,
+    );
+    for (const row of rows) {
+      items.push({ ...row, brand_tag_priority: group.priority });
+    }
+    consumed += total;
+  }
+
+  return toPageResult(items, pagination.pageSize);
+}
+
+function toPageResult(rows: ProductListItem[], pageSize: number): ProductsPageResult {
+  const hasMore = rows.length > pageSize;
+  return { items: hasMore ? rows.slice(0, pageSize) : rows, hasMore };
 }
 
 /** Nº total de productos que matchean los filtros (sin orden/paginación). */
@@ -258,42 +412,7 @@ export async function getProductsCount(
   filters: ProductFilters,
   categoryIds?: string[],
 ): Promise<number> {
-  let query = client
-    .from("products")
-    .select("id", { count: "exact", head: true });
-
-  if (filters.brandId) {
-    query = query.eq("brand_id", filters.brandId);
-  } else if (filters.brandIds && filters.brandIds.length > 0) {
-    query = query.in("brand_id", filters.brandIds);
-  }
-  if (categoryIds && categoryIds.length > 0) {
-    query = query.in("category_id", categoryIds);
-  } else if (filters.categoryId) {
-    query = query.eq("category_id", filters.categoryId);
-  }
-  if (typeof filters.minPrice === "number") {
-    query = query.gte("current_price", filters.minPrice);
-  }
-  if (typeof filters.maxPrice === "number") {
-    query = query.lte("current_price", filters.maxPrice);
-  }
-  if (typeof filters.available === "boolean") {
-    query = query.eq("available", filters.available);
-  }
-  if (typeof filters.onSale === "boolean") {
-    query = query.eq("is_on_sale", filters.onSale);
-  }
-  if (filters.search) {
-    query = query.ilike("name", `%${filters.search}%`);
-  }
-  if (filters.gender) {
-    query = query.or(GENDER_OR_FILTER[filters.gender]);
-  }
-
-  const { count, error } = await query;
-  if (error) throw new Error(`Error al contar productos: ${error.message}`);
-  return count ?? 0;
+  return countProducts(client, { filters, categoryIds });
 }
 
 /** Un producto por id, con marca y categoría embebidas (ficha completa). */
@@ -327,20 +446,6 @@ export async function getProductPriceHistory(
   if (error) {
     throw new Error(`Error al cargar el histórico de precio: ${error.message}`);
   }
-  return data ?? [];
-}
-
-/** Productos de una marca (uso puntual, sin filtros extra). */
-export async function getProductsByBrand(
-  client: Client,
-  brandId: string,
-): Promise<Product[]> {
-  const { data, error } = await client
-    .from("products")
-    .select("*")
-    .eq("brand_id", brandId);
-
-  if (error) throw new Error(`Error al cargar productos: ${error.message}`);
   return data ?? [];
 }
 
