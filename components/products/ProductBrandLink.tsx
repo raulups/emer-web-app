@@ -13,7 +13,7 @@ export function ProductBrandLink({ brandId, brandName }: ProductBrandLinkProps) 
   const genderQuery = useGenderQueryString();
 
   return (
-    <Link href={`/brands/${brandId}${genderQuery}`} className="link-quiet text-ink">
+    <Link href={`/brands/${brandId}${genderQuery}`} className="link-quiet inline-flex min-h-hit items-center text-ink">
       {brandName}
     </Link>
   );

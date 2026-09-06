@@ -19,10 +19,10 @@ export function SiteFooter() {
         <span>Selección editorial</span>
       </div>
       <nav aria-label="Pie de página" className="mono flex flex-col gap-2.5 text-text-3">
-        <Link href="/" className="link-quiet text-ink">
+        <Link href="/" className="link-quiet flex min-h-hit items-center text-ink md:min-h-0">
           Marcas
         </Link>
-        <Link href="/products" className="link-quiet text-ink">
+        <Link href="/products" className="link-quiet flex min-h-hit items-center text-ink md:min-h-0">
           Catálogo
         </Link>
       </nav>

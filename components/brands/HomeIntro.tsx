@@ -17,10 +17,10 @@ interface HomeIntroProps {
  */
 export function HomeIntro({ brands, totalProducts }: HomeIntroProps) {
   return (
-    <section className="flex min-h-[calc(100vh-var(--header-h))] flex-col border-b border-line">
+    <section className="flex flex-col border-b border-line md:min-h-[calc(100vh-var(--header-h))]">
       <div className="grid items-end gap-[clamp(18px,4vw,40px)] px-page pb-[clamp(22px,4vw,34px)] pt-section lg:grid-cols-[minmax(0,52fr)_minmax(0,48fr)]">
         <div className="flex flex-col gap-[clamp(12px,2vw,20px)]">
-          <p className="mono tracking-mono-widest text-text-3">
+          <p className="mono hidden tracking-mono-widest text-text-3 md:block">
             Marketplace de marcas emergentes
           </p>
           <h1 className="display text-fluid-logo tracking-display-xl">
@@ -29,7 +29,7 @@ export function HomeIntro({ brands, totalProducts }: HomeIntroProps) {
             <span className="text-outline ml-[clamp(20px,9vw,128px)] inline-block">/ ES</span>
           </h1>
         </div>
-        <div className="flex flex-col gap-4 pb-[clamp(6px,1.5vw,16px)] lg:border-l lg:border-line lg:pl-[clamp(20px,3vw,34px)]">
+        <div className="hidden flex-col gap-4 pb-[clamp(6px,1.5vw,16px)] lg:flex lg:border-l lg:border-line lg:pl-[clamp(20px,3vw,34px)]">
           <p className="max-w-[40ch] text-fluid-body text-text-2">
             Un índice, {brands.length} {brands.length === 1 ? "marca" : "marcas"}. Descubre
             aquí; compra directamente en la web de cada una.
@@ -44,7 +44,7 @@ export function HomeIntro({ brands, totalProducts }: HomeIntroProps) {
 
       <div className="mono flex items-baseline justify-between gap-4 px-page pb-bar text-text-3">
         <span>
-          Índice de marcas — desliza <span aria-hidden>→</span>
+          Índice de marcas<span className="hidden md:inline"> — desliza <span aria-hidden>→</span></span>
         </span>
         <div className="flex items-center gap-[clamp(14px,3vw,24px)]">
           <SearchBrandLink />

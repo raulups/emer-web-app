@@ -46,7 +46,7 @@ export function BrandChecklist({ brands, selected, onChange }: BrandChecklistPro
           const checked = selected.includes(brand.id);
           return (
             <li key={brand.id}>
-              <label className="flex min-h-[34px] cursor-pointer items-center gap-[11px] text-ui uppercase tracking-[0.02em] transition-opacity duration-fast ease-zara hover:opacity-60">
+              <label className="flex min-h-hit cursor-pointer items-center gap-[11px] md:min-h-[34px] text-ui uppercase tracking-[0.02em] transition-opacity duration-fast ease-zara hover:opacity-60">
                 <input
                   type="checkbox"
                   checked={checked}

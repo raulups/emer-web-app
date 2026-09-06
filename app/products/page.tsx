@@ -51,7 +51,7 @@ function CatalogHeader({ meta }: { meta: React.ReactNode }) {
         <br />
         productos
       </h1>
-      <div className="mono text-text-3 lg:text-right">{meta}</div>
+      <div className="mono hidden text-text-3 lg:block lg:text-right">{meta}</div>
     </section>
   );
 }

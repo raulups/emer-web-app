@@ -8,7 +8,7 @@ interface DirectoryProps {
 /** "El directorio" (1.4 del handoff): bloque de texto en dos columnas. */
 export function Directory({ brandCount, totalProducts }: DirectoryProps) {
   return (
-    <section className="grid gap-[clamp(20px,4vw,32px)] border-b border-line px-page pb-[clamp(38px,6vw,64px)] pt-[clamp(46px,7vw,78px)] lg:grid-cols-2">
+    <section className="hidden gap-[clamp(20px,4vw,32px)] border-b border-line px-page pb-[clamp(38px,6vw,64px)] pt-[clamp(46px,7vw,78px)] md:grid lg:grid-cols-2">
       <h2 className="display max-w-[12ch] text-fluid-section font-extrabold tracking-heading">
         El directorio
       </h2>

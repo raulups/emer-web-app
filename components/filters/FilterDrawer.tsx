@@ -185,7 +185,7 @@ export function FilterDrawer({
         role={open ? "dialog" : undefined}
         aria-modal={open ? "true" : undefined}
         aria-label="Filtros"
-        className={`fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col border-l border-line bg-paper transition-transform duration-base ease-zara lg:sticky lg:inset-auto lg:top-header lg:z-auto lg:max-h-[calc(100vh-var(--header-h))] lg:w-auto lg:max-w-none lg:translate-x-0 lg:border-l-0 lg:border-r ${
+        className={`fixed inset-y-0 right-0 z-50 flex w-full max-w-none flex-col border-l border-line bg-paper sm:max-w-md transition-transform duration-base ease-zara lg:sticky lg:inset-auto lg:top-header lg:z-auto lg:max-h-[calc(100vh-var(--header-h))] lg:w-auto lg:max-w-none lg:translate-x-0 lg:border-l-0 lg:border-r ${
           open ? "translate-x-0" : "translate-x-full"
         }`}
       >

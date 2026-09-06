@@ -44,9 +44,9 @@ export function SortDropdown({ value, onChange }: SortDropdownProps) {
         onClick={() => setOpen((o) => !o)}
         aria-haspopup="listbox"
         aria-expanded={open}
-        className="mono flex min-h-hit items-center gap-2.5 border border-line px-3 text-ink transition-colors duration-fast ease-zara hover:border-ink"
+        className="mono flex min-h-hit shrink-0 items-center gap-2.5 whitespace-nowrap border border-line px-3 text-ink transition-colors duration-fast ease-zara hover:border-ink"
       >
-        <span className="text-text-3">Orden:</span>
+        <span className="text-text-3">Orden<span className="hidden sm:inline">:</span></span>
         <span className="hidden sm:inline">{currentLabel}</span>
         <span aria-hidden>{open ? "—" : "+"}</span>
       </button>

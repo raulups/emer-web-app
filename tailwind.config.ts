@@ -111,6 +111,9 @@ const config: Config = {
         cta: "48px",
         "cta-lg": "56px",
       },
+      minWidth: {
+        hit: "44px",
+      },
       boxShadow: {
         none: "none",
       },

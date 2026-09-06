@@ -118,7 +118,7 @@ export function BrandIndex({ brands }: BrandIndexProps) {
                 className="absolute inset-0 bg-gradient-to-t from-ink/75 via-ink/30 to-ink/35"
               />
 
-              <span className="mono absolute left-[clamp(14px,2vw,22px)] top-[clamp(14px,2vw,22px)] text-paper/85">
+              <span className="mono absolute left-[clamp(14px,2vw,22px)] top-[clamp(14px,2vw,22px)] hidden text-paper/85 md:block">
                 {padCount(index + 1)}
               </span>
 
@@ -140,7 +140,7 @@ export function BrandIndex({ brands }: BrandIndexProps) {
                 {brand.name}
               </span>
               {meta ? (
-                <span className="mono relative mt-2 text-paper/85">{meta}</span>
+                <span className="mono relative mt-2 hidden text-paper/85 md:block">{meta}</span>
               ) : null}
             </Link>
           );

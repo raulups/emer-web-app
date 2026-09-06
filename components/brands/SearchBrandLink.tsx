@@ -7,7 +7,7 @@ export function SearchBrandLink() {
   const { openSearch } = useSearchOverlay();
 
   return (
-    <button type="button" onClick={openSearch} className="link-quiet text-ink">
+    <button type="button" onClick={openSearch} className="link-quiet flex min-h-hit items-center text-ink">
       Buscar marca
     </button>
   );

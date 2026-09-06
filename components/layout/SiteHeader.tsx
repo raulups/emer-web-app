@@ -41,18 +41,21 @@ export function SiteHeader() {
         <div className="flex h-[54px] items-center justify-between gap-3.5 px-page">
           <Link
             href={`/${genderQuery}`}
-            className="wordmark link-quiet text-[clamp(14px,3.4vw,15px)] text-ink"
+            className="wordmark link-quiet flex min-h-hit items-center text-[clamp(14px,3.4vw,15px)] text-ink"
           >
-            Catálogo&nbsp;/&nbsp;ES
+            Catálogo<span className="hidden md:inline">&nbsp;/&nbsp;ES</span>
           </Link>
 
-          <div className="mono flex items-center gap-[clamp(12px,3vw,26px)]">
+          <div className="mono flex items-center gap-[clamp(6px,3vw,26px)]">
             <div className="hidden border-r border-line pr-[clamp(12px,3vw,22px)] md:block">
               <GenderTabs />
             </div>
 
             <nav aria-label="Principal" className="flex items-center gap-[clamp(12px,3vw,26px)]">
-              <Link href={`/${genderQuery}`} className="link-quiet flex min-h-hit items-center text-ink">
+              <Link
+                href={`/${genderQuery}`}
+                className="link-quiet hidden min-h-hit items-center text-ink md:flex"
+              >
                 Marcas
               </Link>
               <Link
@@ -66,7 +69,7 @@ export function SiteHeader() {
             <button
               type="button"
               onClick={openSearch}
-              className="link-quiet flex min-h-hit items-center gap-2.5 border-l border-line pl-[clamp(12px,3vw,22px)] text-ink"
+              className="link-quiet flex min-h-hit min-w-hit items-center justify-center gap-2.5 border-l border-line pl-[clamp(10px,3vw,22px)] text-ink md:min-w-0 md:justify-start"
               aria-label="Buscar marca"
             >
               <SearchGlyph />
@@ -74,7 +77,7 @@ export function SiteHeader() {
             </button>
 
             {/* Fuera del <nav>: no es navegación, es estado de sesión. */}
-            <div className="border-l border-line pl-[clamp(12px,3vw,22px)]">
+            <div className="border-l border-line pl-[clamp(10px,3vw,22px)]">
               <AuthButton />
             </div>
           </div>

@@ -104,8 +104,8 @@ export function ProductCard({
           </div>
 
           {/* Barra de acciones: sube al hover o al enfocar el botón por teclado. */}
-          <div className="absolute inset-x-0 bottom-0 grid translate-y-full grid-cols-[1fr_auto] border-t border-ink transition-transform duration-base ease-zara group-hover:translate-y-0 group-focus-within:translate-y-0 touch:translate-y-0">
-            <span className="mono flex min-h-hit items-center justify-center bg-paper px-3 text-ink">
+          <div className="absolute inset-x-0 bottom-0 grid translate-y-full grid-cols-1 border-t border-ink transition-transform duration-base ease-zara group-hover:translate-y-0 group-focus-within:translate-y-0 sm:grid-cols-[1fr_auto] touch:translate-y-0 touch:grid-cols-1">
+            <span className="mono flex min-h-hit items-center justify-center bg-paper px-3 text-ink touch:hidden">
               Ver pieza <span aria-hidden>&nbsp;→</span>
             </span>
             {product.product_url ? (
@@ -113,7 +113,7 @@ export function ProductCard({
                 type="button"
                 onClick={openStore}
                 aria-label={`Comprar ahora en la web oficial: ${product.name}`}
-                className="mono flex min-h-hit items-center justify-center gap-2 border-l border-ink bg-ink px-3 text-fg-inverse transition-colors duration-fast ease-zara hover:bg-fg-hover"
+                className="mono flex min-h-hit items-center justify-center gap-2 border-t border-ink bg-ink px-3 text-fg-inverse transition-colors duration-fast ease-zara hover:bg-fg-hover sm:border-l sm:border-t-0 touch:border-t-0"
               >
                 Comprar ahora <span aria-hidden>↗</span>
               </button>
@@ -125,11 +125,11 @@ export function ProductCard({
           {showBrand && product.brand ? (
             <p className="mono text-text-3">{product.brand.name}</p>
           ) : null}
-          <div className="flex items-baseline justify-between gap-2.5">
-            <h3 className="text-fluid-name font-bold uppercase tracking-name text-ink">
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-2.5">
+            <h3 className="min-w-0 break-words text-fluid-name font-bold uppercase tracking-name text-ink">
               {product.name}
             </h3>
-            <div className="shrink-0">
+            <div className="sm:shrink-0">
               <PriceTag
                 currentPrice={product.current_price}
                 originalPrice={product.original_price}

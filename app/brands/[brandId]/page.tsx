@@ -96,9 +96,9 @@ async function BrandProductsData({ params, searchParams }: BrandPageProps) {
 
   return (
     <div>
-      <div className="mono flex items-center justify-between gap-3.5 border-b border-line px-page py-[18px] text-text-3">
-        <span>Colección · {padCount(totalCount)} refs</span>
-        <Link href="/products" className="link-quiet text-right text-ink">
+      <div className="mono flex flex-wrap items-center justify-between gap-x-3.5 border-b border-line px-page py-1 text-text-3 md:py-[18px]">
+        <span className="whitespace-nowrap">Colección · {padCount(totalCount)} refs</span>
+        <Link href="/products" className="link-quiet flex min-h-hit items-center text-ink">
           Todas las marcas <span aria-hidden>→</span>
         </Link>
       </div>

@@ -69,7 +69,7 @@ function CategoryTreeNode({
             onClick={() => setExpanded((e) => !e)}
             aria-expanded={expanded}
             aria-label={`${expanded ? "Colapsar" : "Expandir"} ${node.name}`}
-            className="mono flex h-[34px] w-8 shrink-0 items-center justify-center text-text-3 transition-colors duration-fast ease-zara hover:text-ink"
+            className="mono flex h-11 w-11 shrink-0 items-center justify-center text-text-3 md:h-[34px] md:w-8 transition-colors duration-fast ease-zara hover:text-ink"
           >
             <span aria-hidden>{expanded ? "—" : "+"}</span>
           </button>
@@ -118,7 +118,7 @@ function CategoryOption({
       type="button"
       onClick={onSelect}
       aria-pressed={selected}
-      className="flex min-h-[34px] flex-1 items-center gap-[11px] text-left text-ui uppercase tracking-[0.02em] transition-opacity duration-fast ease-zara hover:opacity-60"
+      className="flex min-h-hit flex-1 items-center gap-[11px] text-left md:min-h-[34px] text-ui uppercase tracking-[0.02em] transition-opacity duration-fast ease-zara hover:opacity-60"
     >
       <Checkbox checked={selected} />
       <span className={selected ? "text-ink" : "text-text-2"}>{label}</span>

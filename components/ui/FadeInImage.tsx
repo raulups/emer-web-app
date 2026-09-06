@@ -18,6 +18,14 @@ interface FadeInImageProps extends Omit<ImageProps, "onLoad" | "onError"> {
  * Imagen que aparece con un fade de opacidad 0→1 en --dur-base cuando
  * termina de descargar, sustituyendo al placeholder de esa imagen concreta
  * (fade simple, deliberadamente no un blur-up).
+ *
+ * Es `next/image` con la optimización activa (ver next.config.js): el
+ * `sizes` que pase cada consumidor tiene que describir el ancho REAL que
+ * ocupa la imagen en cada breakpoint, porque de él sale la resolución que
+ * se pide. Un `sizes` mayor que el hueco solo desperdicia bytes; uno menor
+ * produce la imagen estirada y borrosa que se quiere evitar. Las imágenes
+ * protagonistas (galería del detalle, banners) pasan `quality={85}`; las
+ * del grid se quedan en el 75 por defecto.
  */
 export function FadeInImage({
   visible = true,

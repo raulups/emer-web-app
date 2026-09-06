@@ -38,6 +38,7 @@ export function ProductGallery({ images, productName }: ProductGalleryProps) {
             aria-hidden={index > 0}
             fill
             sizes="(min-width: 1024px) 50vw, 100vw"
+            quality={85}
             priority={index === 0}
             className="object-cover"
           />

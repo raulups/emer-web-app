@@ -73,7 +73,13 @@ export function BrandCard({ brand, index = 0, variant = "full" }: BrandCardProps
               alt=""
               aria-hidden
               fill
-              sizes={variant === "narrow" ? "(min-width: 768px) 32vw, 100vw" : "100vw"}
+              sizes={
+                variant === "full"
+                  ? "100vw"
+                  : variant === "wide"
+                    ? "(min-width: 768px) 68vw, 100vw"
+                    : "(min-width: 768px) 32vw, 100vw"
+              }
               className="object-cover"
               showPlaceholder={false}
             />
@@ -91,7 +97,7 @@ export function BrandCard({ brand, index = 0, variant = "full" }: BrandCardProps
           </span>
         </div>
 
-        <span className="mono absolute left-page right-4 top-5 text-paper/85">{meta}</span>
+        <span className="mono absolute left-page right-4 top-5 hidden text-paper/85 md:block">{meta}</span>
 
         <span
           className={`mono absolute bottom-[22px] inline-flex min-h-cta translate-y-[14px] items-center gap-3.5 bg-ink px-[22px] py-4 text-fg-inverse opacity-0 transition-[opacity,transform] duration-base ease-zara group-hover:translate-y-0 group-hover:opacity-100 group-focus-visible:translate-y-0 group-focus-visible:opacity-100 touch:translate-y-0 touch:opacity-100 ${classes.button}`}

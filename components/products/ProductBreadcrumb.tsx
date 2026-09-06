@@ -26,7 +26,7 @@ export function ProductBreadcrumb({ brand }: ProductBreadcrumbProps) {
       >
         <span aria-hidden>←</span> {brand ? `Volver a ${brand.name}` : "Volver al catálogo"}
       </Link>
-      <Link href={`/products${genderQuery}`} className="link-quiet whitespace-nowrap text-text-3">
+      <Link href={`/products${genderQuery}`} className="link-quiet flex min-h-hit shrink-0 items-center whitespace-nowrap text-text-3">
         Catálogo <span aria-hidden>→</span>
       </Link>
     </nav>

@@ -109,7 +109,7 @@ export function ActiveFilterChips({
               transition: { duration: DUR.fast, ease: EASE_OUT },
             }}
             transition={{ duration: DUR.fast, ease: EASE }}
-            className="mono flex min-h-[36px] items-center gap-2.5 border border-line px-3 text-ink transition-colors duration-fast ease-zara hover:border-ink"
+            className="mono flex min-h-hit items-center gap-2.5 border border-line px-3 md:min-h-[36px] text-ink transition-colors duration-fast ease-zara hover:border-ink"
           >
             <span className="max-w-[16rem] truncate">{chip.label}</span>
             <span aria-hidden className="text-text-3">

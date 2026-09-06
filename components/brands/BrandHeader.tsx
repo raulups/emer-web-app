@@ -29,7 +29,7 @@ export function BrandHeader({ brand, productCount, position }: BrandHeaderProps)
           <span aria-hidden>←</span> Volver al directorio
         </Link>
         {position ? (
-          <span className="whitespace-nowrap text-text-3">
+          <span className="hidden whitespace-nowrap text-text-3 md:inline">
             {padCount(position.index + 1)} / {padCount(position.total)}
           </span>
         ) : null}
@@ -43,6 +43,7 @@ export function BrandHeader({ brand, productCount, position }: BrandHeaderProps)
             aria-hidden
             fill
             sizes="100vw"
+            quality={85}
             priority
             showPlaceholder={false}
             className="object-cover"
@@ -56,7 +57,7 @@ export function BrandHeader({ brand, productCount, position }: BrandHeaderProps)
             {brand.name}
           </h1>
           <div className="flex flex-col gap-4 pb-1.5">
-            <p className="max-w-[44ch] text-fluid-body leading-[1.65] text-paper/90">
+            <p className="hidden max-w-[44ch] text-fluid-body leading-[1.65] text-paper/90 md:block">
               {brand.is_emergent
                 ? "Marca emergente. Mantiene su propia dirección de arte y gestiona sus ventas en su web oficial."
                 : "Mantiene su propia dirección de arte y gestiona sus ventas en su web oficial."}
@@ -71,7 +72,7 @@ export function BrandHeader({ brand, productCount, position }: BrandHeaderProps)
                   href={brand.url}
                   target="_blank"
                   rel="noreferrer noopener"
-                  className="link-quiet text-fg-inverse focus-visible:outline-paper"
+                  className="link-quiet inline-flex min-h-hit items-center gap-1 text-fg-inverse focus-visible:outline-paper"
                 >
                   {domain} <span aria-hidden>↗</span>
                 </a>
