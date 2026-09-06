@@ -6,21 +6,23 @@ interface BadgeProps {
 }
 
 /**
- * Etiqueta informativa, NO interactiva. Se distingue a propósito de los
- * elementos clicables: caja con borde/relleno plano, sin subrayado y sin
- * estado hover (los clicables llevan `.link-underline` o borde que reacciona).
+ * Etiqueta informativa, NO interactiva: caja mono plana, sin hover ni
+ * atenuación (los clicables llevan `.link-quiet` o un borde que reacciona).
+ *
+ * `sale` va en bloque negro, no en rojo: el handoff no tiene acentos —"el
+ * color lo aporta la fotografía"— y la jerarquía se construye con
+ * inversiones de negro/papel.
  */
 const TONE_CLASSES: Record<NonNullable<BadgeProps["tone"]>, string> = {
-  default: "border-ink text-ink",
-  // Único uso del acento rojo en toda la app.
-  sale: "border-accent bg-accent text-fg-inverse",
-  unavailable: "border-line bg-paper text-muted-text",
+  default: "border-ink bg-paper/95 text-ink",
+  sale: "border-ink bg-ink text-fg-inverse",
+  unavailable: "border-line bg-paper/95 text-text-3",
 };
 
 export function Badge({ children, tone = "default" }: BadgeProps) {
   return (
     <span
-      className={`inline-flex cursor-default select-none items-center border px-2 py-0.5 text-ui uppercase tracking-ui ${TONE_CLASSES[tone]}`}
+      className={`mono inline-flex cursor-default select-none items-center border px-2.5 py-1 ${TONE_CLASSES[tone]}`}
     >
       {children}
     </span>

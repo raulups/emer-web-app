@@ -24,8 +24,7 @@ interface ProductGridInfiniteProps {
  *
  * Quien la monta debe darle una `key` distinta por combinación de
  * filtros/orden (ver ProductsExplorer) para que el cambio de filtros
- * resetee la paginación de golpe, en vez de mezclar páginas de dos
- * búsquedas distintas.
+ * resetee la paginación de golpe.
  */
 export function ProductGridInfinite({
   initialItems,
@@ -52,18 +51,16 @@ export function ProductGridInfinite({
       <ProductGrid products={items} showBrand={showBrand} density={density} />
 
       {items.length > 0 ? (
-        <div ref={sentinelRef} className="mt-12">
-          {isLoadingMore ? (
-            <ProductGridSkeleton count={3} density={density} />
-          ) : null}
+        <div ref={sentinelRef}>
+          {isLoadingMore ? <ProductGridSkeleton count={3} density={density} /> : null}
 
           {loadError ? (
-            <div className="flex flex-col items-center gap-3 py-6 text-center">
-              <p className="text-ui text-muted-text">{loadError}</p>
+            <div className="flex flex-col items-center gap-3 py-8 text-center">
+              <p className="mono text-text-3">{loadError}</p>
               <button
                 type="button"
                 onClick={loadMore}
-                className="link-underline text-ui uppercase tracking-ui text-ink"
+                className="mono link-quiet text-ink"
               >
                 Reintentar
               </button>
@@ -71,9 +68,7 @@ export function ProductGridInfinite({
           ) : null}
 
           {!hasMore && !isLoadingMore && !loadError ? (
-            <p className="py-6 text-center text-ui uppercase tracking-ui text-muted-text">
-              No hay más productos
-            </p>
+            <p className="mono py-8 text-center text-text-3">No hay más productos</p>
           ) : null}
         </div>
       ) : null}

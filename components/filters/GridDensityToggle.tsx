@@ -24,10 +24,8 @@ export function GridDensityToggle({ value, onChange }: GridDensityToggleProps) {
             onClick={() => onChange(option.value)}
             aria-pressed={active}
             title={option.label}
-            className={`flex h-10 w-10 items-center justify-center transition-colors duration-fast ease-zara ${
-              active
-                ? "bg-ink text-fg-inverse"
-                : "text-muted-text hover:text-ink"
+            className={`flex h-11 w-11 items-center justify-center transition-colors duration-fast ease-zara ${
+              active ? "bg-ink text-fg-inverse" : "text-text-3 hover:text-ink"
             }`}
           >
             <DensityIcon density={option.value} />

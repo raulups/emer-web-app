@@ -9,11 +9,9 @@ interface PriceTagProps {
 }
 
 /**
- * Precio actual y, si hay oferta, el original tachado al lado.
- *
- * Jerarquía del sistema: el precio va un punto por encima del nombre del
- * producto (14px) y en peso regular; el acento rojo aparece solo aquí y en
- * el chip REBAJA, nunca en otro sitio de la app.
+ * Precio en mono (el handoff reserva IBM Plex Mono para todo lo numérico) y,
+ * si hay oferta, el original tachado al lado en gris secundario. Sin color
+ * de acento: la rebaja se lee por el tachado y por el chip REBAJA.
  */
 export function PriceTag({
   currentPrice,
@@ -23,15 +21,13 @@ export function PriceTag({
   size = "sm",
 }: PriceTagProps) {
   const showOriginal = isOnSale && originalPrice && originalPrice > (currentPrice ?? 0);
-  const textSize = size === "lg" ? "text-2xl" : "text-base";
+  const textSize = size === "lg" ? "text-[16px]" : "text-ui";
 
   return (
-    <div className="flex items-baseline gap-2">
-      <span className={`${textSize} tracking-ui ${isOnSale ? "text-accent" : "text-ink"}`}>
-        {formatPrice(currentPrice, currency)}
-      </span>
+    <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 font-mono">
+      <span className={`${textSize} text-ink`}>{formatPrice(currentPrice, currency)}</span>
       {showOriginal ? (
-        <span className="text-ui tracking-ui text-muted-text line-through">
+        <span className="text-ui text-text-3 line-through">
           {formatPrice(originalPrice, currency)}
         </span>
       ) : null}

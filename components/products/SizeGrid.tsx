@@ -8,19 +8,25 @@ interface SizeGridProps {
 }
 
 /**
- * Selector de tallas en cuadrícula: las que no tienen stock se muestran
- * atenuadas y tachadas (no se eliminan de la lista, para que el usuario
- * sepa que la talla existe aunque ahora no haya existencias).
+ * Tallas con la anatomía del modal del handoff: botones mono de 52×46px con
+ * borde en --fg, la seleccionada invertida, y debajo la línea de estado
+ * ("Selecciona una talla…" → "Talla M · disponible en la web de la marca").
+ * Las tallas sin stock se muestran atenuadas y tachadas, no se ocultan.
+ *
+ * La selección es informativa: aquí no hay cesta, la compra sale a la web
+ * de la marca.
  */
 export function SizeGrid({ sizes }: SizeGridProps) {
   const [selected, setSelected] = useState<string | null>(null);
 
   if (sizes.length === 0) return null;
 
+  const allOut = sizes.every((s) => !s.available);
+
   return (
-    <div>
-      <p className="text-ui uppercase tracking-ui text-ink">Tallas</p>
-      <div className="mt-3 grid grid-cols-4 gap-2 sm:grid-cols-5">
+    <div className="flex flex-col gap-3">
+      <p className="mono tracking-mono-wide text-text-3">Tallas disponibles</p>
+      <div className="flex flex-wrap gap-2">
         {sizes.map((size, index) => {
           const isSelected = selected === size.label;
           return (
@@ -30,26 +36,26 @@ export function SizeGrid({ sizes }: SizeGridProps) {
               disabled={!size.available}
               aria-pressed={isSelected}
               onClick={() => setSelected(size.label)}
-              className={`flex h-11 items-center justify-center border text-ui tracking-ui transition-colors duration-fast ease-zara ${
+              className={`mono flex min-h-[46px] min-w-[52px] items-center justify-center border px-2.5 py-3 tracking-[0.1em] transition-colors duration-fast ease-zara ${
                 !size.available
-                  ? "cursor-not-allowed border-line text-muted-text"
+                  ? "cursor-not-allowed border-line text-text-3"
                   : isSelected
                     ? "border-ink bg-ink text-fg-inverse"
-                    : "border-line text-ink hover:border-ink"
+                    : "border-ink text-ink hover:bg-ink hover:text-fg-inverse"
               }`}
             >
-              <span className={!size.available ? "line-through" : ""}>
-                {size.label}
-              </span>
+              <span className={!size.available ? "line-through" : ""}>{size.label}</span>
             </button>
           );
         })}
       </div>
-      {sizes.every((s) => !s.available) ? (
-        <p className="mt-3 text-ui text-muted-text">
-          Sin stock en ninguna talla ahora mismo.
-        </p>
-      ) : null}
+      <p className="mono text-text-3" aria-live="polite">
+        {allOut
+          ? "Sin stock en ninguna talla ahora mismo"
+          : selected
+            ? `Talla ${selected} · disponible en la web de la marca`
+            : "Selecciona una talla para ver disponibilidad"}
+      </p>
     </div>
   );
 }

@@ -38,3 +38,26 @@ export function discountPercent(
   }
   return Math.round(((originalPrice - currentPrice) / originalPrice) * 100);
 }
+
+/**
+ * Contador a dos dígitos ("04", "12"), el formato de todos los números del
+ * handoff. Por encima de 99 se deja tal cual.
+ */
+export function padCount(value: number): string {
+  return String(value).padStart(2, "0");
+}
+
+/**
+ * Dominio legible de una URL ("scffrs.com"), sin protocolo ni `www.`. Es lo
+ * que el handoff muestra como meta de marca junto al nombre. Devuelve null
+ * si la URL no se puede parsear.
+ */
+export function domainOf(url: string | null | undefined): string | null {
+  if (!url) return null;
+  try {
+    const host = new URL(url.includes("://") ? url : `https://${url}`).hostname;
+    return host.replace(/^www\./, "") || null;
+  } catch {
+    return null;
+  }
+}

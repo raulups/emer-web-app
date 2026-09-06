@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense, cache } from "react";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import {
@@ -7,13 +8,14 @@ import {
   buildCategoryTree,
   getBrandById,
   getBrandProductCount,
+  getBrands,
   getCategories,
   getCategoryDescendantIds,
   getProductsCount,
   getProductsPage,
 } from "@/lib/supabase/queries";
 import { parseProductFilters, type FilterSearchParams } from "@/lib/types/filters";
-import { PageContainer } from "@/components/layout/PageContainer";
+import { padCount } from "@/lib/utils/format";
 import { BrandHeader } from "@/components/brands/BrandHeader";
 import { BrandHeaderSkeleton } from "@/components/brands/BrandHeaderSkeleton";
 import { ProductsExplorer } from "@/components/products/ProductsExplorer";
@@ -37,32 +39,35 @@ export async function generateMetadata({
   return { title: brand?.name ?? "Marca" };
 }
 
+/** Tienda de marca (Vista 2 del handoff): cabecera + barra de sección + catálogo. */
 export default function BrandPage({ params, searchParams }: BrandPageProps) {
   return (
     <div>
-      {/* El hero va fuera de PageContainer: así puede ir a sangre completa. */}
       <Suspense fallback={<BrandHeaderSkeleton />}>
         <BrandHeaderData brandId={params.brandId} />
       </Suspense>
-      <PageContainer>
-        <Suspense fallback={<ProductsExplorerSkeleton />}>
-          <BrandProductsData params={params} searchParams={searchParams} />
-        </Suspense>
-      </PageContainer>
+      <Suspense fallback={<ProductsExplorerSkeleton />}>
+        <BrandProductsData params={params} searchParams={searchParams} />
+      </Suspense>
     </div>
   );
 }
 
 async function BrandHeaderData({ brandId }: { brandId: string }) {
-  const brand = await getCachedBrand(brandId);
+  const client = createServerSupabaseClient();
+  const [brand, brands] = await Promise.all([getCachedBrand(brandId), getBrands(client)]);
   if (!brand) notFound();
 
-  const productCount = await getBrandProductCount(
-    createServerSupabaseClient(),
-    brand.id,
-  );
+  const productCount = await getBrandProductCount(client, brand.id);
+  const index = brands.findIndex((b) => b.id === brand.id);
 
-  return <BrandHeader brand={brand} productCount={productCount} />;
+  return (
+    <BrandHeader
+      brand={brand}
+      productCount={productCount}
+      position={index >= 0 ? { index, total: brands.length } : undefined}
+    />
+  );
 }
 
 async function BrandProductsData({ params, searchParams }: BrandPageProps) {
@@ -90,14 +95,22 @@ async function BrandProductsData({ params, searchParams }: BrandPageProps) {
   const categoryTree = buildCategoryTree(categories);
 
   return (
-    <ProductsExplorer
-      categoryTree={categoryTree}
-      categories={categories}
-      lockedBrandId={brand.id}
-      initialItems={items}
-      initialHasMore={hasMore}
-      totalCount={totalCount}
-      categoryIds={categoryIds}
-    />
+    <div>
+      <div className="mono flex items-center justify-between gap-3.5 border-b border-line px-page py-[18px] text-text-3">
+        <span>Colección · {padCount(totalCount)} refs</span>
+        <Link href="/products" className="link-quiet text-right text-ink">
+          Todas las marcas <span aria-hidden>→</span>
+        </Link>
+      </div>
+      <ProductsExplorer
+        categoryTree={categoryTree}
+        categories={categories}
+        lockedBrandId={brand.id}
+        initialItems={items}
+        initialHasMore={hasMore}
+        totalCount={totalCount}
+        categoryIds={categoryIds}
+      />
+    </div>
   );
 }

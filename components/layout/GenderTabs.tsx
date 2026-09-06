@@ -5,55 +5,52 @@ import { useProductFilters } from "@/hooks/useProductFilters";
 
 /**
  * Selector de contexto global Mujer/Hombre/Todo. Reutiliza directamente
- * `useProductFilters` (sin `brandId`): es genérico, solo lee/escribe query
- * params, así que sirve igual aquí que en la barra de filtros de listado —
- * el `gender` que fija queda en la URL y viaja con cualquier navegación que
- * lo preserve (ver `useGenderQueryString`, usado por los links de card/nav).
+ * `useProductFilters` (sin `brandId`): solo lee/escribe query params, así
+ * que sirve igual aquí que en la barra de filtros — el `gender` que fija
+ * queda en la URL y viaja con cualquier navegación que lo preserve (ver
+ * `useGenderQueryString`).
  *
- * Mayúsculas + tracking de UI, sin fondo de color: la pestaña activa se
- * marca con subrayado, nunca con color.
+ * Mono, mayúsculas, sin fondo de color: la pestaña activa se marca con el
+ * punto de 5px del handoff (el mismo que usan sus pastillas de orden).
  */
-const TAB_BASE =
-  "border-b-2 pb-0.5 text-ui uppercase tracking-ui transition-colors duration-fast ease-zara";
-
 export function GenderTabs() {
   const { filters, setParams } = useProductFilters();
 
+  const options = [
+    ...GENDER_OPTIONS.map((option) => ({
+      label: option.label,
+      active: filters.gender === option.value,
+      select: () =>
+        setParams({ gender: filters.gender === option.value ? undefined : option.value }),
+    })),
+    {
+      label: "Todo",
+      active: !filters.gender,
+      select: () => setParams({ gender: undefined }),
+    },
+  ];
+
   return (
-    <nav
-      aria-label="Filtrar por género"
-      className="mx-auto flex h-10 max-w-7xl items-center justify-center gap-8 px-4 sm:px-8"
-    >
-      {GENDER_OPTIONS.map((option) => {
-        const active = filters.gender === option.value;
-        return (
-          <button
-            key={option.value}
-            type="button"
-            onClick={() => setParams({ gender: active ? undefined : option.value })}
-            aria-pressed={active}
-            className={`${TAB_BASE} ${
-              active
-                ? "border-ink text-ink"
-                : "border-transparent text-muted-text hover:text-ink"
+    <nav aria-label="Filtrar por género" className="mono flex items-center gap-[clamp(12px,3vw,22px)]">
+      {options.map((option) => (
+        <button
+          key={option.label}
+          type="button"
+          onClick={option.select}
+          aria-pressed={option.active}
+          className={`link-quiet flex min-h-hit items-center gap-2 ${
+            option.active ? "text-ink" : "text-text-3"
+          }`}
+        >
+          <span
+            aria-hidden
+            className={`h-[5px] w-[5px] bg-ink transition-opacity duration-fast ease-zara ${
+              option.active ? "opacity-100" : "opacity-0"
             }`}
-          >
-            {option.label}
-          </button>
-        );
-      })}
-      <button
-        type="button"
-        onClick={() => setParams({ gender: undefined })}
-        aria-pressed={!filters.gender}
-        className={`${TAB_BASE} ${
-          !filters.gender
-            ? "border-ink text-ink"
-            : "border-transparent text-muted-text hover:text-ink"
-        }`}
-      >
-        Todo
-      </button>
+          />
+          {option.label}
+        </button>
+      ))}
     </nav>
   );
 }

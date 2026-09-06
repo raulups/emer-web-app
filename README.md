@@ -3,15 +3,20 @@
 Herramienta de exploración de un catálogo de marcas de ropa y sus productos.
 No es un e-commerce (sin carrito ni checkout): es una app de solo lectura
 sobre Supabase/PostgreSQL, pensada para escalar con más funcionalidades.
-Estilo editorial minimalista inspirado en ZARA.com, incluyendo su patrón de
-navegación (selector Mujer/Hombre, drawer de filtros).
+Lenguaje visual del handoff de Claude Design "Marketplace Moda"
+(brutalismo editorial: Archivo 900, etiquetas mono, líneas de 1px), con
+selector Mujer/Hombre y filtros siempre visibles.
 
 ## Stack
 
 - **Next.js 14** (App Router) + TypeScript estricto
-- **Tailwind CSS** — estilo minimalista/editorial (referencia: ZARA.com)
-- **Supabase JS client** (`@supabase/supabase-js`) — solo lectura, vía anon key
-- **Framer Motion** — transiciones de página, drawer, acordeones y micro-interacciones
+- **Tailwind CSS** — tokens del handoff "Marketplace Moda" (ver "Sistema de diseño")
+- **Supabase JS client** (`@supabase/supabase-js`) — catálogo de solo lectura
+  vía anon key; escritura solo en el endpoint de admin, con service_role
+- **Supabase Auth** vía `@supabase/ssr` — email + contraseña, sesión en
+  cookies (compartida entre navegador y servidor), rol en la tabla `profiles`
+- **Framer Motion** — transiciones de página, parallax del hero, marquee,
+  modales, acordeones y micro-interacciones
 
 ## Estructura
 
@@ -20,10 +25,16 @@ navegación (selector Mujer/Hombre, drawer de filtros).
   /brands/[brandId]        Página de marca + sus productos
   /products                Vista global de productos
   /products/[productId]    Detalle de producto
+  /api/brands              POST: alta de marca (solo admin), subida a Storage
 /components
   /ui                      Botones, badges, inputs genéricos, AnimatedCounter,
-                            RouteProgressBar, FadeInImage, skeletons
-  /brands                  BrandCard, BrandGrid, BrandHeader (+ skeletons)
+                            RouteProgressBar, FadeInImage, skeletons, Modal,
+                            Toast, FileField, Marquee
+  /auth                    AuthButton (header) + LoginModal (acceso/registro)
+  /admin                   AdminBrandActions, CreateBrandModal/Form
+  /brands                  Home: HomeIntro, BrandIndex, BrandHero, Directory,
+                            BrandGrid (bento) + BrandCard, CatalogCta;
+                            BrandHeader (+ skeletons)
   /products                ProductCard/Grid, ProductGridInfinite,
                             ProductsExplorer (toolbar + chips + drawer + grid),
                             galería, atributos, tallas, histórico de precio...
@@ -31,17 +42,21 @@ navegación (selector Mujer/Hombre, drawer de filtros).
                             acordeón de filtros,
                             árbol de categorías, slider de precio, checklist
                             de marca, chips de filtros activos, SortDropdown
-  /layout                  SiteHeader (+ selector de género), PageTransition
+  /layout                  SiteHeader (+ selector de género), SearchOverlay,
+                            SiteFooter, PageTransition
 /lib
-  /supabase                Clientes (client/server) + queries tipadas
+  /supabase                Clientes (navegador / servidor / servidor con
+                            sesión / service_role) + queries tipadas
   /types                   Tipos derivados del esquema, tipos de filtros y
                             densidad de rejilla
   /utils                   Formateo (precio, fecha)
 /hooks                     useProductFilters (URL + useTransition),
                             useInfiniteProducts, useIntersectionObserver,
                             useGenderQueryString, useDebouncedValue,
-                            useGridDensity (persistida en localStorage)
-/supabase/sql              Índices recomendados (ver más abajo)
+                            useGridDensity (persistida en localStorage),
+                            useUser + AuthProvider (sesión y rol),
+                            useSearchOverlay (estado del buscador)
+/supabase/sql              Migración de auth + índices recomendados
 ```
 
 ## Setup
@@ -57,12 +72,24 @@ Crea un archivo `.env.local` en la raíz (ya incluido en `.gitignore`) con:
 ```
 NEXT_PUBLIC_SUPABASE_URL=https://<tu-proyecto>.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=<tu-anon-key>
+SUPABASE_SERVICE_ROLE_KEY=<tu-service-role-key>
 ```
 
-La app usa **exclusivamente la anon key pública**: no hay escritura, solo
-lecturas (`SELECT`) sobre `brands`, `categories` y `products`. La `service_role`
-/ `secret key` nunca debe usarse aquí — no es necesaria y comprometería la
-base de datos si se filtrara al cliente.
+Todo el catálogo (navegación, filtros, detalle) funciona **solo con la anon
+key pública**, apoyada en las policies RLS de `SELECT` público. La sesión de
+usuario también va con esa clave.
+
+`SUPABASE_SERVICE_ROLE_KEY` es la excepción y existe únicamente por el alta de
+marcas del administrador: subir a Storage e insertar en `brands`. Va **sin
+prefijo `NEXT_PUBLIC_`** a propósito — Next solo inyecta en el bundle del
+navegador las variables con ese prefijo, así que esta nunca sale del servidor.
+Su único consumidor es `lib/supabase/admin.ts`, que abre con
+`import "server-only"`: si algún día acabara importada desde un Client
+Component, el build falla en vez de filtrar la clave.
+
+> **Esa clave salta RLS por completo.** No la pegues en ningún fichero que no
+> sea `.env.local` (ignorado por git), y si sospechas que se ha expuesto,
+> rótala desde el dashboard de Supabase.
 
 Asegúrate de que las políticas RLS del proyecto de Supabase permiten `SELECT`
 público (anónimo) sobre `brands`, `categories` y `products`. Si no existen,
@@ -84,19 +111,28 @@ create policy "public read product_price_history" on public.product_price_histor
   for select to anon using (true);
 ```
 
-Además, para que las queries de listado/paginación no se noten lentas al
-crecer la tabla, corre también `supabase/sql/recommended_indexes.sql` en el
-SQL editor (índices en `brand_id`, `category_id`, `created_at`,
-`current_price` y `product_price_history.product_id`). La app solo tiene la
-anon key, así que no puede ejecutar ese DDL por sí misma.
+`recommended_indexes.sql` añade índices en `brand_id`, `category_id`,
+`created_at`, `current_price` y `product_price_history.product_id`, para que
+el listado y la paginación no se degraden al crecer la tabla.
 
-### 3. Instalar dependencias
+### 3. Tablas y policies
+
+Ejecuta en el **SQL Editor** de Supabase, en este orden:
+
+1. `supabase/sql/auth_profiles.sql` — crea `profiles`, su RLS, el trigger que
+   da de alta el perfil de cada usuario nuevo, y extiende la lectura del
+   catálogo al rol `authenticated` (ver más abajo por qué hace falta).
+2. `supabase/sql/recommended_indexes.sql` — índices de listado y paginación.
+
+La app solo tiene la anon key, así que no puede ejecutar ese DDL por sí misma.
+
+### 4. Instalar dependencias
 
 ```bash
 npm install
 ```
 
-### 4. Ejecutar en desarrollo
+### 5. Ejecutar en desarrollo
 
 ```bash
 npm run dev
@@ -104,7 +140,7 @@ npm run dev
 
 Abre [http://localhost:3000](http://localhost:3000).
 
-### 5. Otros comandos
+### 6. Otros comandos
 
 ```bash
 npm run build       # build de producción
@@ -113,96 +149,182 @@ npm run lint          # ESLint (next/core-web-vitals)
 npm run typecheck   # tsc --noEmit
 ```
 
+## Autenticación y rol de administrador
+
+Un visitante anónimo usa la web exactamente como antes: el catálogo entero es
+público. La sesión solo añade una cosa — las cuentas con rol `admin` pueden
+crear marcas, imágenes incluidas.
+
+### Cómo hacer admin a una cuenta
+
+> **No hay interfaz para gestionar roles.** Toda cuenta nueva nace como
+> `user`, lo fija el trigger `on_auth_user_created`. Para ascender una cuenta,
+> regístrate primero desde la web y luego ejecuta a mano en el **SQL Editor**
+> de Supabase:
+>
+> ```sql
+> update profiles set role = 'admin' where email = 'tu@email.com';
+> ```
+>
+> Después, recarga la web (o vuelve a entrar) y aparecerá **+ CREAR MARCA** en
+> el listado de marcas.
+
+Que el ascenso sea manual es la decisión de diseño, no una carencia: `profiles`
+tiene RLS activo y **solo** una policy de `SELECT` sobre la fila propia. Sin
+policy de `INSERT`/`UPDATE`, el cliente no puede escribir en la tabla en
+absoluto, así que nadie puede ascenderse a sí mismo desde el navegador.
+
+### Cómo se comprueba el rol
+
+`isAdmin` en el cliente es únicamente una señal de interfaz: decide si se
+pinta el botón. La autorización real está en `app/api/brands/route.ts`, y son
+dos pasos deliberadamente separados:
+
+1. `auth.getUser()` sobre el cliente de cookies — **no** `getSession()`.
+   `getUser()` revalida el JWT contra el servidor de Supabase; `getSession()`
+   se limita a decodificar la cookie, que llega del navegador y por tanto no
+   sirve como control de acceso.
+2. El rol se relee de `profiles` con la service_role key, nunca del token ni
+   de nada que haya mandado el cliente.
+
+Manipular `isAdmin` desde las devtools solo consigue ver un botón cuyo
+endpoint responde 403.
+
+### Sesión en cookies, no en localStorage
+
+El cliente de navegador (`lib/supabase/client.ts`) usa `createBrowserClient`
+de `@supabase/ssr`, que guarda la sesión en **cookies**. Es lo que permite que
+el login que ocurre en el navegador lo pueda leer el servidor
+(`createServerSupabaseAuthClient`) para autorizar el `POST`. Con la sesión en
+localStorage, el endpoint no tendría forma de saber quién llama.
+
+Hay **dos** clientes de servidor a propósito:
+
+| Cliente | Clave | Lee cookies | Para qué |
+| --- | --- | --- | --- |
+| `createServerSupabaseClient` | anon | no | Catálogo en Server Components. Al no leer cookies no marca la ruta como dinámica, y `/` sigue prerenderizándose estática. |
+| `createServerSupabaseAuthClient` | anon | sí | Saber quién llama al endpoint de admin. |
+| `createAdminSupabaseClient` | service_role | no | Leer el rol, subir a Storage e insertar. Solo desde el route handler. |
+
+No hay `middleware.ts`: obligaría a que **todas** las rutas leyeran cookies y
+pasaran a dinámicas, perdiendo el prerender estático del listado de marcas. El
+refresco de token lo hace el cliente de navegador, que es quien tiene la
+sesión viva.
+
+`supabase-js` se carga con `import()` diferido desde el `AuthProvider`, igual
+que ya hacían el scroll infinito y el drawer de filtros: son ~70 kB que no
+tienen por qué entrar en el bundle crítico de una portada de catálogo.
+
+### Alta de marca
+
+El formulario manda `multipart/form-data` (no JSON, porque lleva ficheros) a
+`POST /api/brands`. El servidor valida cada imagen —tipo `image/*` y 5 MB
+máximo—, **antes** de tocar Storage, para que una petición inválida no deje
+ficheros subidos sin fila que los referencie.
+
+El nombre en el bucket es determinista: slug de la marca + sufijo + extensión
+original (`dameapresparis_image.webp`). Con `upsert: true`, reintentar la
+misma marca sobrescribe el fichero en vez de acumular duplicados. La
+contrapartida asumida es que dos marcas cuyo nombre produzca el mismo slug
+compartirían fichero — aceptable en un catálogo curado a mano, donde las
+marcas se dan de alta de una en una.
+
+La subida va siempre desde el servidor con la service_role key, así que **no
+hace falta ninguna policy de Storage**: el service role las salta todas. El
+bucket `brands` se asume ya creado y público.
+
+### Lo que NO incluye
+
+Solo creación de marcas. No hay edición ni borrado de marcas o imágenes, ni
+gestión de productos desde el admin, ni recuperación de contraseña. Si el
+proyecto de Supabase tiene activada la confirmación por email, `signUp` no
+devuelve sesión y el modal lo dice: hay que confirmar el correo antes de
+poder acceder.
+
 ## Sistema de diseño
 
-Lenguaje visual y de movimiento tipo ZARA.com adaptado a un catálogo (no a un
-e-commerce). La regla de fondo: la app se compone como una revista de moda, no
-como una herramienta de compra — restricción tipográfica y cromática extrema,
-cero decoración, y movimiento que existe para que la imagen respire, nunca para
-llamar la atención sobre sí mismo.
+Lenguaje visual del handoff de Claude Design **"Marketplace Moda"** (brutalismo
+limpio: Archivo 900 gigante, etiquetas mono, líneas de 1px, bloques negros
+macizos, cero radio, cero sombra, sin acentos de color). Sustituye por completo
+al sistema anterior basado en el teardown de Zara.com; lo que sobrevive de aquel
+son las decisiones de **usabilidad y accesibilidad** que el proyecto tomó a
+propósito, listadas más abajo.
 
 ### Tokens
 
 Fuente de verdad única: las CSS variables de `app/globals.css`.
-`tailwind.config.ts` solo las mapea a utilidades (`bg-paper`, `text-ink`,
-`text-ui`, `tracking-ui`, `duration-base`, `ease-zara`…), y `lib/motion.ts` las
-espeja en el formato que necesita Framer Motion (segundos + arrays de bezier).
-Cambiar un valor en `globals.css` lo propaga a CSS y a las animaciones a la vez.
+`tailwind.config.ts` solo las mapea a utilidades y `lib/motion.ts` las espeja en
+el formato de Framer Motion. Los alias que ya usaba el markup (`ink`, `paper`,
+`line`, `subtle`, `muted-text`, `tracking-ui`) siguen funcionando y apuntan a
+los tokens nuevos.
 
 | Grupo | Tokens |
 | --- | --- |
-| Color | `--bg` #FFF · `--fg` #000 · `--fg-inverse` #FFF · `--border` #E5E5E5 · `--muted` #999 · `--muted-text` #666 · `--accent` #C8102E · `--skeleton` #F7F7F7 |
-| Tipografía | `--font-display` (Playfair Display) · `--font-ui` (Inter) · `--display-tracking` -0.05em · `--ui-tracking` 0.06em · `--ui-size-base` 14px · `--ui-line-height` 1.5 |
-| Forma | `--radius` 0 · `--border-width` 1px · sin `box-shadow` en toda la app |
-| Movimiento | `--dur-fast` 200ms · `--dur-base` 400ms · `--dur-slow` 600ms · `--ease` · `--ease-out` |
+| Color | `--bg` #FAFAF8 · `--fg` #0A0A0A · `--fg-hover` #151512 · `--border` #E4E4DF · `--muted-bg` #EFEFEB · texto `--text-2` #3A3A36 / `--text-3` #6B6B66 / `--text-4` #8A8A84 / `--text-5` #A8A8A2 |
+| Tipografía | `--font-display` = `--font-ui` Archivo (400/700/800/900) · `--font-mono` IBM Plex Mono (400/500) · `--ui-size-base` 14px · trackings `display` −0.055em, `display-xl` −0.06em, `heading` −0.045em, `name` −0.02em, `mono` 0.14em, `mono-wide` 0.18em, `mono-widest` 0.22em |
+| Escala fluida | `text-fluid-*` (`clamp()`): logo, hero, index, view, brand, cta, section, title, result, bento-full/wide/narrow, name, body |
+| Espaciado | `--px-page` clamp(14px, 3.5vw, 28px) · `--py-section` clamp(34px, 7vw, 76px) · `--py-bar` clamp(18px, 3vw, 26px) · hit targets `min-h-hit` 44px, `min-h-cta` 48px, `min-h-cta-lg` 56px |
+| Forma | `--radius` 0 · líneas de 1px · sin `box-shadow` |
+| Movimiento | `--dur-fast` 200ms · `--dur-base` 400ms · `--dur-slow` 600ms · `--dur-zoom` 1100ms · `--ease` cubic-bezier(.22,.61,.36,1) |
+| Header | `--header-h` 54px (94px en móvil, con la fila de género) |
 
-Reglas de aplicación:
-
-- **Un solo peso** (400) para todo el chrome de interfaz. El 300 se reserva a
-  nombres de producto; nunca bold fuera de `--font-display`.
-- `--font-display` solo en el wordmark del header y en los titulares de página.
-  Todo lo demás es `--font-ui` en mayúsculas con `--ui-tracking`.
-- **CTAs**: texto subrayado (`.link-underline`) o borde de 1px. El relleno
-  sólido negro (`<Button variant="solid">`) es la excepción funcional y está
-  reservado a exactamente dos sitios: "Ver X resultados" del drawer y el botón
-  de compra directa de la card.
-- **El acento rojo solo aparece en rebajas**: precio de oferta (`PriceTag`) y
-  chip "REBAJA" (`<Badge tone="sale">`). En ningún otro sitio.
-- **Imagen a sangre**: en las cards, la imagen ocupa el 100% del contenedor sin
-  padding interno y el texto va siempre *debajo*, fuera de ella. Lo único que se
-  superpone es el chip de rebaja y el botón de compra directa. El hero de
-  `/brands/[brandId]` va a sangre completa de viewport (`.bleed-full`, ~60vh) y
-  el detalle da a la galería el 65% del ancho en desktop.
+Utilidades propias en `globals.css`: `.display` (Archivo 900, mayúsculas),
+`.mono` (Plex Mono 14px, mayúsculas, tracking), `.text-outline` (texto
+delineado que se rellena al hover), `.photo-reveal` (foto en b/n que pasa a
+color al hover del `.group`; en color directamente sin puntero),
+`.link-quiet` (enlace que se atenúa), `.placeholder-dark/-light` (rayado del
+handoff para huecos sin foto), `.no-scrollbar`. Variante Tailwind `touch:`
+(`@media (hover: none)`) para mostrar siempre lo que el handoff solo revela al
+hover.
 
 ### Movimiento
 
-- Nunca spring, nunca rebote, nunca overshoot: solo `--ease` (entradas, fades) y
-  `--ease-out` (salidas).
-- Desplazamiento máximo de entrada: **16px** (`ENTER_Y` = 12px en `lib/motion.ts`).
-- Escala máxima en hover: **1.02** (el zoom de imagen de `ProductCard`/`BrandCard`).
-- 200ms para estados tipográficos de hover, 400ms para fades de imagen y
-  apertura de paneles, 600ms para la transición entre pantallas (`PageTransition`).
-- El stagger del grid se calcula con `staggerDelay()`, con techo a 0.36s para que
-  la última card no espere una cola larga.
+- Una sola curva, la del handoff; nunca spring.
+- Entradas: `fadeUp` de 14px (`ENTER_Y`) en vistas, cards y botones; `panelIn`
+  (18px + escala .985, `PANEL_ENTER`) en modales.
+- Hover de imagen: b/n → color en `--dur-slow` y zoom 1.05 (marca) / 1.04
+  (producto) en `--dur-zoom`.
+- Hero con parallax (`translateY = scrollY × 0.28`) y marquee continuo; ambos
+  se anulan con `prefers-reduced-motion`, y el marquee se pausa al hover/foco.
+  El marquee va con `useAnimationFrame` sobre un motion value en vez de un
+  keyframe infinito precisamente para poder pausarlo sin salto.
+- El drawer de filtros móvil es la única transición en CSS puro: es el mismo
+  nodo que en desktop se queda `static` como sidebar, y Framer animaría `x`
+  también ahí.
 
-### Carga de imágenes
+### Mapeo del handoff a las rutas
 
-`FadeInImage` (`components/ui/FadeInImage.tsx`) monta un placeholder por imagen
-y hace un fade de opacidad 0→1 en `--dur-base` cuando esa imagen concreta
-termina de descargar — un fade simple, deliberadamente no un blur-up. `onError`
-también marca como cargada, para que un `src` roto no deje el placeholder
-pulsando para siempre. Los skeletons de fetch (`components/ui/Skeleton.tsx`)
-son un gris muy claro (`--skeleton`), nunca oscuro.
-
-### Densidad de rejilla
-
-`useGridDensity` expone tres densidades — compacta (4 columnas en desktop),
-estándar (3) y amplia (2) — controladas desde `GridDensityToggle` en la barra
-sticky y **persistidas en `localStorage`**. La preferencia se lee en un efecto
-post-mount, no durante el render, porque leer `localStorage` en el primer render
-rompería la hidratación; el acceso va en `try/catch` porque en modo privado el
-propio acceso puede lanzar. Las clases de columnas son literales estáticos
-(`GRID_DENSITY_CLASSES`) para que Tailwind no las purgue.
-
-### Desviaciones deliberadas
-
-Se adopta el lenguaje *estético* de Zara, no sus carencias de usabilidad. Lo que
-se hace distinto, a propósito:
-
-| Zara.com real | Aquí | Motivo |
+| Handoff | Ruta | Notas |
 | --- | --- | --- |
-| Filtro y orden casi escondidos | Barra sticky visible con contador de resultados | Es la crítica de UX más repetida a su web |
-| Texto blanco sobre imagen sin overlay | Hero de marca con gradiente + blur obligatorio | Contraste AA sobre cualquier imagen |
-| Microtipografía por debajo de 14px | `--ui-size-base` 14px como mínimo absoluto | Legibilidad |
-| Gris claro para texto secundario | `--muted-text` #666 en vez de `--muted` #999 | #999 sobre blanco da 2.85:1 y no llega a AA |
-| Foco visible inconsistente | `:focus-visible` global de 2px en `--fg` | Navegación por teclado en toda la app |
-| Sin skeletons de carga | Skeletons + fade-in por imagen | Percepción de velocidad con imágenes pesadas |
-| Sin acceso directo a la tienda | Botón de compra directa en cada card | Es un catálogo, no un checkout |
+| Home: índice + logo, hero, marquee, directorio, bento, CTA | `/` | El bento de 3 tarjetas se generaliza a N marcas en grupos de tres (fila completa + fila 68/32). La foto del hero es la de la primera marca con imagen, en b/n. |
+| Tienda de marca | `/brands/[brandId]` | Banner + barra de sección + catálogo con filtros (el prototipo no tenía filtros por marca; aquí se conservan). |
+| Catálogo global | `/products` | Sidebar sticky de 268px + barra de resultados + rejilla continua. Por debajo de `lg` el sidebar es un drawer. |
+| Modal de producto | `/products/[productId]` | Misma anatomía (dos columnas, tallas, CTA "Comprar en la web oficial") pero como página con ruta propia. |
+| Buscador full-screen | header | Busca solo marcas (nombre y dominio), como el prototipo. Se carga bajo demanda. |
 
-Elementos **no clicables** (badges, etiquetas informativas) se distinguen
-visualmente de los clicables: `Badge` es una caja plana sin hover ni subrayado,
-mientras que todo lo interactivo lleva `.link-underline` o un borde que
-reacciona al hover.
+### Desviaciones deliberadas respecto al handoff
+
+| Handoff | Aquí | Motivo |
+| --- | --- | --- |
+| Etiquetas mono de 9–11px | 14px mínimo en toda la interfaz | Decisión de accesibilidad del proyecto, confirmada con el cliente |
+| Texto a 42–55% de opacidad sobre negro | ≥ 70% | Contraste AA |
+| Filtros escondidos tras `+` en móvil | Botón "Filtros / NN" siempre visible en la barra sticky | Usabilidad |
+| Sin selector de género, sin densidad de rejilla, sin chips de filtros, sin scroll infinito | Se conservan, restilizados | Funcionalidad existente |
+| Compra solo desde el modal | Además, botón ↗ en cada card | Funcionalidad existente |
+| Sin estado de rebaja | Chip REBAJA en bloque negro y precio original tachado | El catálogo real tiene ofertas; sin acento de color, como pide el handoff |
+| Hover como único descubridor del botón "Ver colección" / compra directa | Visibles siempre en dispositivos sin puntero (`touch:`) | No hay hover en táctil |
+
+### Lo que se descartó del handoff
+
+- **Filtrado en vivo de la home desde el buscador**: el overlay cubre la
+  página al 94%, así que ese filtrado no se vería; la lista de resultados del
+  propio overlay cumple la misma función.
+- **Filtros de talla y color y contadores por opción**: los datos reales no
+  tienen esas facetas normalizadas (ver "Swatches de color").
+- **Copys de mock** ("COLECTIVO / ES", "FW26", "SCFFRS"…), fotografías
+  placeholder y anotaciones `[ BANNER 1800×1100 ]`: nada de eso se copia.
+- **Iconos**: ninguno externo; la lupa se construye en CSS y `✕ → ← ↗ ●`
+  son caracteres, como en el prototipo.
 
 ## Notas de diseño
 
@@ -335,6 +457,9 @@ dato que ni siquiera vive en el campo pensado para ello.
 - `category_keyword_rules`, `shop_category_mappings`, `scrape_runs` y
   `unclassified_products` no se usan en esta versión.
 - Swatches de color en la card (ver sección anterior).
+- Administración: solo alta de marcas. Sin edición ni borrado de marcas o
+  imágenes, sin gestión de productos, sin UI de roles y sin recuperación de
+  contraseña (ver "Autenticación y rol de administrador").
 - Relevancia de género en el listado de marcas (`/`): las marcas no tienen
   un campo de género propio (una marca puede vender de todo), así que el
   selector global persiste al navegar pero no filtra `/` — solo `/products`

@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import type { Brand } from "@/lib/types";
 import { Input } from "@/components/ui/Input";
+import { Checkbox } from "./Checkbox";
 
 interface BrandChecklistProps {
   brands: Brand[];
@@ -40,19 +41,22 @@ export function BrandChecklist({ brands, selected, onChange }: BrandChecklistPro
           className="mb-3"
         />
       ) : null}
-      <ul className="max-h-64 space-y-1 overflow-y-auto">
+      <ul className="max-h-64 overflow-y-auto">
         {filteredBrands.map((brand) => {
           const checked = selected.includes(brand.id);
           return (
             <li key={brand.id}>
-              <label className="flex cursor-pointer items-center gap-3 py-1.5 text-ui">
+              <label className="flex min-h-[34px] cursor-pointer items-center gap-[11px] text-ui uppercase tracking-[0.02em] transition-opacity duration-fast ease-zara hover:opacity-60">
                 <input
                   type="checkbox"
                   checked={checked}
                   onChange={() => toggle(brand.id)}
-                  className="h-4 w-4 shrink-0 rounded-none accent-ink"
+                  className="peer sr-only"
                 />
-                <span className={checked ? "text-ink" : "text-muted-text"}>
+                <span className="inline-flex peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-fg">
+                  <Checkbox checked={checked} />
+                </span>
+                <span className={`flex-1 ${checked ? "text-ink" : "text-text-2"}`}>
                   {brand.name}
                 </span>
               </label>
@@ -60,9 +64,7 @@ export function BrandChecklist({ brands, selected, onChange }: BrandChecklistPro
           );
         })}
         {filteredBrands.length === 0 ? (
-          <li className="py-2 text-ui text-muted-text">
-            Sin resultados para “{query}”.
-          </li>
+          <li className="mono py-2 text-text-3">Sin resultados para “{query}”.</li>
         ) : null}
       </ul>
     </div>

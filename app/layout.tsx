@@ -1,26 +1,29 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { Inter, Playfair_Display } from "next/font/google";
+import { Archivo, IBM_Plex_Mono } from "next/font/google";
+import { AuthProvider } from "@/hooks/useUser";
+import { SearchOverlayProvider } from "@/hooks/useSearchOverlay";
 import { SiteHeader } from "@/components/layout/SiteHeader";
 import { SiteHeaderFallback } from "@/components/layout/SiteHeaderFallback";
+import { SiteFooter } from "@/components/layout/SiteFooter";
 import { PageTransition } from "@/components/layout/PageTransition";
 import { RouteProgressBar } from "@/components/ui/RouteProgressBar";
 import "./globals.css";
 
-// --font-ui: todo el chrome de interfaz, un único peso (400) salvo el 300
-// de nombres de producto largos. Self-hosted por Next.
-const inter = Inter({
+// --font-display / --font-ui: Archivo para todo — titulares en 900/800,
+// nombres de producto en 700, cuerpo en 400. Self-hosted por Next.
+const archivo = Archivo({
   subsets: ["latin"],
-  weight: ["300", "400"],
-  variable: "--font-ui",
+  weight: ["400", "700", "800", "900"],
+  variable: "--font-display",
   display: "swap",
 });
 
-// --font-display: serif editorial, solo wordmark y titulares puntuales.
-const playfair = Playfair_Display({
+// --font-mono: IBM Plex Mono para navegación, etiquetas, precios y CTAs.
+const plexMono = IBM_Plex_Mono({
   subsets: ["latin"],
   weight: ["400", "500"],
-  variable: "--font-display",
+  variable: "--font-mono",
   display: "swap",
 });
 
@@ -29,7 +32,7 @@ export const metadata: Metadata = {
     default: "Catálogo de marcas",
     template: "%s · Catálogo de marcas",
   },
-  description: "Explora marcas de ropa y su catálogo de productos.",
+  description: "Índice de marcas emergentes y su catálogo. Descubre aquí; compra en la web de cada marca.",
 };
 
 export default function RootLayout({
@@ -37,21 +40,29 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  // --font-ui se resuelve a --font-display en globals.css: una sola familia
+  // sans (Archivo) para chrome y titulares.
   return (
-    <html lang="es" className={`${inter.variable} ${playfair.variable}`}>
+    <html lang="es" className={`${archivo.variable} ${plexMono.variable}`}>
       <body className="min-h-screen font-sans antialiased">
-        <RouteProgressBar />
-        {/* SiteHeader es client (depende de la URL para el género) — el
-            Suspense evita que eso bloquee el prerender estático del resto
-            de la página; el fallback tiene su misma altura para no saltar. */}
-        <Suspense fallback={<SiteHeaderFallback />}>
-          <SiteHeader />
-        </Suspense>
-        {/* Sin padding aquí: lo aporta PageContainer en cada ruta, para que
-            el hero de marca pueda ir a sangre completa (ver PageContainer). */}
-        <main>
-          <PageTransition>{children}</PageTransition>
-        </main>
+        {/* AuthProvider envuelve todo el árbol: el header y los controles de
+            admin comparten una única sesión en vez de resolverla cada uno. */}
+        <AuthProvider>
+          <SearchOverlayProvider>
+            <RouteProgressBar />
+            {/* SiteHeader es client (depende de la URL para el género) — el
+                Suspense evita que eso bloquee el prerender estático del
+                resto de la página; el fallback tiene su misma altura. */}
+            <Suspense fallback={<SiteHeaderFallback />}>
+              <SiteHeader />
+            </Suspense>
+            {/* El header es fixed (handoff): el main arranca bajo su altura. */}
+            <main className="pt-header">
+              <PageTransition>{children}</PageTransition>
+            </main>
+            <SiteFooter />
+          </SearchOverlayProvider>
+        </AuthProvider>
       </body>
     </html>
   );

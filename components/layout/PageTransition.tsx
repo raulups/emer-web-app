@@ -3,21 +3,15 @@
 import type { ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { DUR, EASE, EASE_OUT } from "@/lib/motion";
+import { DUR, EASE, EASE_OUT, ENTER_Y } from "@/lib/motion";
 
 /**
- * Transición de contenido entre rutas: el contenido saliente se desvanece
- * antes de que entre el nuevo (`mode="wait"`), evitando parpadeos o saltos
- * de layout al navegar.
+ * Transición de contenido entre rutas: el `fadeUp` del handoff (opacidad
+ * 0→1, 14px→0) al entrar cada vista, y el contenido saliente se desvanece
+ * antes (`mode="wait"`) para no solapar dos páginas.
  *
  * Duraciones asimétricas a propósito: la salida va en --dur-fast para no
- * añadir latencia percibida, y la entrada en --dur-slow, que es el token
- * que el sistema reserva para transiciones entre pantallas. El
- * desplazamiento se queda en 8px, dentro del máximo de 16px.
- *
- * Se monta una sola vez desde app/layout.tsx (no desde template.tsx: ese
- * mecanismo remonta el árbol en cada navegación y por tanto no puede
- * solapar salida/entrada).
+ * añadir latencia percibida, y la entrada en --dur-slow.
  *
  * Deliberadamente sin `searchParams` en la key: los cambios de filtro/orden
  * (mismo pathname) NO deben disparar esta transición de página completa —
@@ -30,7 +24,7 @@ export function PageTransition({ children }: { children: ReactNode }) {
     <AnimatePresence mode="wait" initial={false}>
       <motion.div
         key={pathname}
-        initial={{ opacity: 0, y: 8 }}
+        initial={{ opacity: 0, y: ENTER_Y }}
         animate={{ opacity: 1, y: 0 }}
         exit={{
           opacity: 0,

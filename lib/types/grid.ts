@@ -16,11 +16,14 @@ export const GRID_DENSITIES: { value: GridDensity; label: string }[] = [
   { value: "wide", label: "Vista amplia" },
 ];
 
-export const DEFAULT_GRID_DENSITY: GridDensity = "standard";
+/** Por defecto la vista compacta: 4 columnas en desktop. */
+export const DEFAULT_GRID_DENSITY: GridDensity = "compact";
 
 /**
  * Clases completas y estáticas (no interpoladas) para que Tailwind las vea
- * al escanear el código y no las purgue.
+ * al escanear el código y no las purgue. Este fichero está en `lib/`, que
+ * tiene que figurar en `content` de tailwind.config.ts: si no, Tailwind no
+ * genera estas clases y el grid pinta una sola columna.
  */
 export const GRID_DENSITY_CLASSES: Record<GridDensity, string> = {
   compact: "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4",

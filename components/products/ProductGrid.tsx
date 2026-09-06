@@ -13,6 +13,11 @@ interface ProductGridProps {
   density?: GridDensity;
 }
 
+/**
+ * Rejilla continua del handoff: sin gap, cada card aporta su borde derecho
+ * e inferior de 1px. El número de columnas lo decide la densidad elegida
+ * por el usuario (2/3/4 en desktop), que se conserva del sistema anterior.
+ */
 export function ProductGrid({
   products,
   showBrand = false,
@@ -22,13 +27,13 @@ export function ProductGrid({
     return (
       <EmptyState
         title="Sin resultados"
-        description="Ningún producto coincide con los filtros seleccionados. Prueba a ajustarlos."
+        description="Ningún producto coincide con los filtros seleccionados."
       />
     );
   }
 
   return (
-    <div className={`grid gap-x-4 gap-y-12 ${GRID_DENSITY_CLASSES[density]}`}>
+    <div className={`grid ${GRID_DENSITY_CLASSES[density]}`}>
       {products.map((product, index) => (
         <ProductCard
           key={product.id}

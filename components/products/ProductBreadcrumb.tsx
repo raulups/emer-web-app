@@ -7,26 +7,28 @@ interface ProductBreadcrumbProps {
   brand: { id: string; name: string } | null;
 }
 
-/** Breadcrumb del detalle de producto, preservando el género activo en los links. */
+/**
+ * Barra de volver del detalle (la del handoff en la tienda de marca): a la
+ * izquierda "← Volver" a la marca si la hay, si no al catálogo; a la
+ * derecha el nombre de la marca. Preserva el género activo en los links.
+ */
 export function ProductBreadcrumb({ brand }: ProductBreadcrumbProps) {
   const genderQuery = useGenderQueryString();
 
   return (
-    <nav className="mb-8 flex flex-wrap items-center gap-2 text-ui uppercase tracking-ui text-muted-text">
-      <Link href={`/products${genderQuery}`} className="link-underline text-ink">
-        Productos
+    <nav
+      aria-label="Volver"
+      className="mono flex items-center justify-between gap-4 border-b border-line px-page py-3.5"
+    >
+      <Link
+        href={brand ? `/brands/${brand.id}${genderQuery}` : `/products${genderQuery}`}
+        className="link-quiet flex min-h-hit items-center gap-2.5 text-ink"
+      >
+        <span aria-hidden>←</span> {brand ? `Volver a ${brand.name}` : "Volver al catálogo"}
       </Link>
-      {brand ? (
-        <>
-          <span aria-hidden>/</span>
-          <Link
-            href={`/brands/${brand.id}${genderQuery}`}
-            className="link-underline text-ink"
-          >
-            {brand.name}
-          </Link>
-        </>
-      ) : null}
+      <Link href={`/products${genderQuery}`} className="link-quiet whitespace-nowrap text-text-3">
+        Catálogo <span aria-hidden>→</span>
+      </Link>
     </nav>
   );
 }

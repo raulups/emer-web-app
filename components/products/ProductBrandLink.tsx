@@ -8,15 +8,12 @@ interface ProductBrandLinkProps {
   brandName: string;
 }
 
-/** Link a la marca dentro de la ficha de producto, preservando el género activo. */
+/** Link a la marca en el eyebrow de la ficha, preservando el género activo. */
 export function ProductBrandLink({ brandId, brandName }: ProductBrandLinkProps) {
   const genderQuery = useGenderQueryString();
 
   return (
-    <Link
-      href={`/brands/${brandId}${genderQuery}`}
-      className="link-underline mt-3 inline-block text-ui uppercase tracking-ui text-muted-text"
-    >
+    <Link href={`/brands/${brandId}${genderQuery}`} className="link-quiet text-ink">
       {brandName}
     </Link>
   );

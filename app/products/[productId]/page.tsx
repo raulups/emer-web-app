@@ -8,7 +8,7 @@ import {
   imageUrlsToList,
   sizesToOptions,
 } from "@/lib/types";
-import { PageContainer } from "@/components/layout/PageContainer";
+import { domainOf } from "@/lib/utils/format";
 import { Badge } from "@/components/ui/Badge";
 import { PriceTag } from "@/components/ui/PriceTag";
 import { ProductGallery } from "@/components/products/ProductGallery";
@@ -35,6 +35,12 @@ export async function generateMetadata({
   return { title: product?.name ?? "Producto" };
 }
 
+/**
+ * Detalle de producto con la anatomía del modal del handoff (overlay B),
+ * pero como página con ruta propia: dos columnas —galería a la izquierda
+ * con borde, ficha a la derecha— y el CTA "Comprar en la web oficial" como
+ * único bloque negro. No hay cesta: la compra siempre sale a la marca.
+ */
 export default async function ProductPage({ params }: ProductPageProps) {
   const product = await getCachedProduct(params.productId);
 
@@ -54,45 +60,32 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
   const sizes = sizesToOptions(product.sizes);
   const attributeEntries = attributesToEntries(product.attributes);
+  const brandDomain = domainOf(product.product_url);
 
   return (
-    <PageContainer>
-      <Suspense fallback={null}>
+    <div>
+      <Suspense fallback={<div className="min-h-[52px] border-b border-line" />}>
         <ProductBreadcrumb brand={product.brand} />
       </Suspense>
 
-      {/* La galería se lleva el 65% del ancho en desktop: el peso visual va
-          en la fotografía, y la columna de info queda pegada al lado. */}
-      <div className="grid grid-cols-1 gap-12 lg:grid-cols-[65fr_35fr] lg:gap-16">
+      <div className="grid border-b border-line lg:grid-cols-2">
         <ProductGallery images={gallery} productName={product.name} />
 
-        <div className="divide-y divide-line lg:sticky lg:top-header lg:self-start">
-          <div className="pb-8">
-            <div className="flex flex-wrap gap-1.5">
-              {product.is_on_sale ? <Badge tone="sale">Rebaja</Badge> : null}
-              {product.available === false ? (
-                <Badge tone="unavailable">Agotado</Badge>
+        <div className="flex flex-col gap-[clamp(16px,3vw,22px)] px-[clamp(18px,4vw,36px)] pb-[clamp(24px,4vw,36px)] pt-[clamp(30px,5vw,44px)]">
+          <div className="flex flex-col gap-3">
+            <div className="mono flex flex-wrap items-center gap-x-2 gap-y-1 tracking-mono-wide text-text-3">
+              {product.brand ? (
+                <Suspense fallback={<span>{product.brand.name}</span>}>
+                  <ProductBrandLink brandId={product.brand.id} brandName={product.brand.name} />
+                </Suspense>
               ) : null}
+              {product.brand && product.category ? <span aria-hidden>·</span> : null}
+              {product.category ? <span>{product.category.name}</span> : null}
             </div>
 
-            {product.brand ? (
-              <Suspense fallback={null}>
-                <ProductBrandLink brandId={product.brand.id} brandName={product.brand.name} />
-              </Suspense>
-            ) : null}
+            <h1 className="display text-fluid-title tracking-heading">{product.name}</h1>
 
-            {/* Peso ligero (300): el sistema lo reserva a nombres de producto. */}
-            <h1 className="mt-3 text-3xl font-light uppercase leading-tight tracking-ui text-ink sm:text-4xl">
-              {product.name}
-            </h1>
-
-            {product.category ? (
-              <p className="mt-3 text-ui uppercase tracking-ui text-muted-text">
-                {product.category.name}
-              </p>
-            ) : null}
-
-            <div className="mt-6">
+            <div className="flex flex-wrap items-center gap-3">
               <PriceTag
                 currentPrice={product.current_price}
                 originalPrice={product.original_price}
@@ -100,69 +93,66 @@ export default async function ProductPage({ params }: ProductPageProps) {
                 isOnSale={product.is_on_sale}
                 size="lg"
               />
+              {product.is_on_sale ? <Badge tone="sale">Rebaja</Badge> : null}
+              {product.available === false ? (
+                <Badge tone="unavailable">Agotado</Badge>
+              ) : null}
             </div>
           </div>
 
+          <hr className="border-0 border-t border-line" />
+
           {product.description ? (
-            <div className="py-8">
-              {/* Interlineado amplio en bloques descriptivos. */}
-              <p className="whitespace-pre-line text-ui leading-relaxed text-ink">
-                {product.description}
-              </p>
-            </div>
+            <p className="whitespace-pre-line text-fluid-body text-text-2">
+              {product.description}
+            </p>
           ) : null}
 
-          {product.color_name || sizes.length > 0 ? (
-            <div className="space-y-6 py-8">
-              {product.color_name ? (
-                <p className="text-ui text-ink">
-                  <span className="text-muted-text">Color: </span>
-                  {product.color_name}
-                </p>
-              ) : null}
-              <SizeGrid sizes={sizes} />
-            </div>
+          {product.color_name ? (
+            <p className="mono text-text-3">
+              Color <span className="text-ink">{product.color_name}</span>
+            </p>
           ) : null}
 
-          <div className="py-8">
-            <div className="flex items-center gap-2 text-ui">
+          <SizeGrid sizes={sizes} />
+
+          {product.product_url ? (
+            <a
+              href={product.product_url}
+              target="_blank"
+              rel="noreferrer noopener"
+              className="mono flex min-h-cta-lg items-center justify-center gap-3.5 bg-ink p-[clamp(20px,4vw,24px)] text-center tracking-mono-wide text-fg-inverse transition-colors duration-fast ease-zara hover:bg-fg-hover"
+            >
+              Comprar en la web oficial <span aria-hidden>↗</span>
+            </a>
+          ) : null}
+
+          <div className="mono flex flex-col gap-2.5 text-text-3">
+            <span className="flex items-center gap-2">
               <span
                 aria-hidden
-                className={`h-2 w-2 ${product.available === false ? "bg-line" : "bg-ink"}`}
+                className={`h-[5px] w-[5px] ${product.available === false ? "bg-line" : "bg-ink"}`}
               />
-              <span className="text-ink">
-                {product.available === false ? "No disponible" : "Disponible"}
+              {product.available === false ? "No disponible" : "Disponible"}
+            </span>
+            {product.brand ? (
+              <span>
+                Venta y envío gestionados por {product.brand.name}
+                {brandDomain ? ` · ${brandDomain}` : ""}
               </span>
-            </div>
-
-            {product.product_url ? (
-              <a
-                href={product.product_url}
-                target="_blank"
-                rel="noreferrer noopener"
-                className="link-underline mt-4 inline-block text-ui uppercase tracking-ui text-ink"
-              >
-                Ver en la tienda
-              </a>
             ) : null}
           </div>
 
           {attributeEntries.length > 0 ? (
-            <div className="py-8">
-              <p className="mb-3 text-ui uppercase tracking-ui text-ink">
-                Detalles
-              </p>
+            <div className="flex flex-col gap-3">
+              <p className="mono tracking-mono-wide text-text-3">Detalles</p>
               <ProductAttributes entries={attributeEntries} />
             </div>
           ) : null}
 
-          {priceHistory.length > 1 ? (
-            <div className="py-8">
-              <PriceHistoryChart history={priceHistory} />
-            </div>
-          ) : null}
+          {priceHistory.length > 1 ? <PriceHistoryChart history={priceHistory} /> : null}
         </div>
       </div>
-    </PageContainer>
+    </div>
   );
 }

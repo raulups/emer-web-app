@@ -30,10 +30,14 @@ interface ProductsExplorerProps {
 }
 
 /**
- * Combina la barra sticky (botón de filtro + contador + orden + densidad),
- * los chips de filtros activos, el drawer y el grid con scroll infinito. Es
- * el único punto que llama a `useProductFilters`, para que todo comparta la
- * misma fuente de verdad (la URL) y el mismo `isPending` de la transición.
+ * Cuerpo del catálogo (Vista 3 del handoff): sidebar de filtros de 268px
+ * a la izquierda + contenido con barra sticky de resultados y rejilla
+ * continua. Por debajo de `lg` el sidebar se convierte en un drawer que
+ * abre el botón "Filtrar" de la barra.
+ *
+ * Es el único punto que llama a `useProductFilters`, para que todo comparta
+ * la misma fuente de verdad (la URL) y el mismo `isPending` de la
+ * transición.
  */
 export function ProductsExplorer({
   categoryTree,
@@ -62,52 +66,7 @@ export function ProductsExplorer({
     (filters.brandIds?.length ?? 0);
 
   return (
-    <div>
-      <FilterToolbar
-        resultCount={totalCount}
-        activeFilterCount={activeFilterCount}
-        sort={filters.sort}
-        onSortChange={(sort) => setParams({ sort })}
-        onOpenFilters={() => setDrawerOpen(true)}
-        density={density}
-        onDensityChange={setDensity}
-      />
-
-      {hasActiveDrawerFilters(filters) ? (
-        <ActiveFilterChips
-          filters={filters}
-          categoryTree={categoryTree}
-          brands={brands}
-          onChange={setParams}
-        />
-      ) : null}
-
-      <div className="relative mt-8" aria-busy={isPending}>
-        <ProductGridInfinite
-          key={gridKey}
-          initialItems={initialItems}
-          initialHasMore={initialHasMore}
-          filters={filters}
-          categoryIds={categoryIds}
-          showBrand={showBrand}
-          density={density}
-        />
-
-        <AnimatePresence>
-          {isPending ? (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: DUR.fast, ease: EASE }}
-              className="absolute inset-0 z-[2] -m-2 bg-paper/85 p-2"
-            >
-              <ProductGridSkeleton density={density} />
-            </motion.div>
-          ) : null}
-        </AnimatePresence>
-      </div>
-
+    <div className="grid lg:grid-cols-[268px_minmax(0,1fr)]">
       <FilterDrawer
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
@@ -129,7 +88,7 @@ export function ProductsExplorer({
           setDrawerOpen(false);
         }}
         onClear={() => {
-          // Solo limpia los filtros del drawer — el género (barra global) y
+          // Solo limpia los filtros del panel — el género (barra global) y
           // el orden (dropdown aparte) no son parte de "Borrar filtros".
           setParams({
             q: undefined,
@@ -143,6 +102,53 @@ export function ProductsExplorer({
           setDrawerOpen(false);
         }}
       />
+
+      <div className="min-w-0">
+        <FilterToolbar
+          resultCount={totalCount}
+          activeFilterCount={activeFilterCount}
+          sort={filters.sort}
+          onSortChange={(sort) => setParams({ sort })}
+          onOpenFilters={() => setDrawerOpen(true)}
+          density={density}
+          onDensityChange={setDensity}
+        />
+
+        {hasActiveDrawerFilters(filters) ? (
+          <ActiveFilterChips
+            filters={filters}
+            categoryTree={categoryTree}
+            brands={brands}
+            onChange={setParams}
+          />
+        ) : null}
+
+        <div className="relative" aria-busy={isPending}>
+          <ProductGridInfinite
+            key={gridKey}
+            initialItems={initialItems}
+            initialHasMore={initialHasMore}
+            filters={filters}
+            categoryIds={categoryIds}
+            showBrand={showBrand}
+            density={density}
+          />
+
+          <AnimatePresence>
+            {isPending ? (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: DUR.fast, ease: EASE }}
+                className="absolute inset-0 z-[2] bg-paper/85"
+              >
+                <ProductGridSkeleton density={density} />
+              </motion.div>
+            ) : null}
+          </AnimatePresence>
+        </div>
+      </div>
     </div>
   );
 }

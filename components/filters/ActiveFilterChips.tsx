@@ -31,7 +31,7 @@ function findCategoryName(tree: CategoryNode[], id: string): string | null {
 /**
  * Chips de filtros activos, debajo de la barra sticky (no forma parte de
  * ella, así que scrollea con la página). Cada chip se puede quitar por
- * separado sin abrir el drawer.
+ * separado sin abrir el panel.
  */
 export function ActiveFilterChips({
   filters,
@@ -75,7 +75,7 @@ export function ActiveFilterChips({
   if (filters.onSale === true) {
     chips.push({
       key: "sale",
-      label: "En oferta",
+      label: "Rebaja",
       onRemove: () => onChange({ sale: undefined }),
     });
   }
@@ -94,26 +94,26 @@ export function ActiveFilterChips({
   if (chips.length === 0) return null;
 
   return (
-    <div className="flex flex-wrap gap-2 py-4">
+    <div className="flex flex-wrap gap-2 border-b border-line px-[clamp(14px,3.5vw,24px)] py-3">
       <AnimatePresence initial={false}>
         {chips.map((chip) => (
           <motion.button
             key={chip.key}
             type="button"
             onClick={chip.onRemove}
-            initial={{ opacity: 0, scale: 0.96 }}
-            animate={{ opacity: 1, scale: 1 }}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
             exit={{
               opacity: 0,
-              scale: 0.96,
+              y: 6,
               transition: { duration: DUR.fast, ease: EASE_OUT },
             }}
             transition={{ duration: DUR.fast, ease: EASE }}
-            className="flex items-center gap-2 border border-line px-3 py-1.5 text-ui uppercase tracking-ui text-ink transition-colors duration-fast ease-zara hover:border-ink"
+            className="mono flex min-h-[36px] items-center gap-2.5 border border-line px-3 text-ink transition-colors duration-fast ease-zara hover:border-ink"
           >
             <span className="max-w-[16rem] truncate">{chip.label}</span>
-            <span aria-hidden className="text-muted-text">
-              ×
+            <span aria-hidden className="text-text-3">
+              ✕
             </span>
             <span className="sr-only">Quitar filtro</span>
           </motion.button>

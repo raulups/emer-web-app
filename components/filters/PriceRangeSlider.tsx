@@ -48,9 +48,9 @@ export function PriceRangeSlider({ min, max, onChange }: PriceRangeSliderProps) 
   return (
     <div>
       <div className="relative h-4">
-        <div className="absolute left-0 right-0 top-1/2 h-[2px] -translate-y-1/2 bg-line" />
+        <div className="absolute left-0 right-0 top-1/2 h-px -translate-y-1/2 bg-line" />
         <div
-          className="absolute top-1/2 h-[2px] -translate-y-1/2 bg-ink"
+          className="absolute top-1/2 h-px -translate-y-1/2 bg-ink"
           style={{ left: `${minPercent}%`, right: `${100 - maxPercent}%` }}
         />
         <input
@@ -81,7 +81,7 @@ export function PriceRangeSlider({ min, max, onChange }: PriceRangeSliderProps) 
         />
       </div>
 
-      <div className="mt-4 flex items-center gap-2">
+      <div className="mt-4 flex items-center gap-2 font-mono">
         <Input
           type="number"
           inputMode="decimal"
@@ -89,8 +89,9 @@ export function PriceRangeSlider({ min, max, onChange }: PriceRangeSliderProps) 
           value={draftMin}
           onChange={(e) => setDraftMin(Math.min(Number(e.target.value) || 0, draftMax))}
           aria-label="Precio mínimo exacto"
+          className="font-mono"
         />
-        <span className="text-muted">—</span>
+        <span className="text-text-3">—</span>
         <Input
           type="number"
           inputMode="decimal"
@@ -100,6 +101,7 @@ export function PriceRangeSlider({ min, max, onChange }: PriceRangeSliderProps) 
             setDraftMax(Math.max(Number(e.target.value) || 0, draftMin))
           }
           aria-label="Precio máximo exacto"
+          className="font-mono"
         />
       </div>
     </div>

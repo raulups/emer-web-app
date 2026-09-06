@@ -3,20 +3,21 @@
 import { useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { DUR, EASE } from "@/lib/motion";
+import { padCount } from "@/lib/utils/format";
 
 interface AccordionSectionProps {
   title: string;
   children: ReactNode;
   defaultOpen?: boolean;
-  /** Numeración editorial ("01", "02"...), tono de sumario de revista. */
+  /** Numeración editorial ("01", "02"...), tono de sumario. */
   index?: number;
-  /** Se muestra junto al título (p.ej. "2" cuando hay valores elegidos). */
+  /** Se muestra junto al título (p.ej. "02" cuando hay valores elegidos). */
   badge?: ReactNode;
 }
 
 /**
- * Sección expandible/colapsable del drawer de filtros, con animación de
- * altura automática (AnimatePresence + `height: "auto"`).
+ * Grupo del sidebar de filtros: etiqueta mono en gris con el número, y
+ * contenido expandible con animación de altura automática.
  */
 export function AccordionSection({
   title,
@@ -33,30 +34,18 @@ export function AccordionSection({
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
-        className="flex w-full items-center justify-between gap-3 py-4 text-left"
+        className="mono flex min-h-hit w-full items-center justify-between gap-3 py-3.5 text-left tracking-mono-wide text-text-3 transition-colors duration-fast ease-zara hover:text-ink"
       >
-        <span className="flex items-baseline gap-3 text-ui uppercase tracking-ui text-ink">
-          {index !== undefined ? (
-            <span className="text-muted-text">
-              {String(index).padStart(2, "0")}
-            </span>
-          ) : null}
-          <span className="flex items-center gap-2">
+        <span className="flex items-baseline gap-3">
+          {index !== undefined ? <span>{padCount(index)}</span> : null}
+          <span className="flex items-center gap-2 text-ink">
             {title}
-            {badge}
+            {badge ? <span className="text-text-3">/ {badge}</span> : null}
           </span>
         </span>
-        <motion.svg
-          animate={{ rotate: open ? 180 : 0 }}
-          transition={{ duration: DUR.fast, ease: EASE }}
-          width="10"
-          height="6"
-          viewBox="0 0 10 6"
-          fill="none"
-          aria-hidden
-        >
-          <path d="M1 1L5 5L9 1" stroke="currentColor" strokeWidth="1.5" />
-        </motion.svg>
+        <span aria-hidden className="text-ink">
+          {open ? "—" : "+"}
+        </span>
       </button>
       <AnimatePresence initial={false}>
         {open ? (

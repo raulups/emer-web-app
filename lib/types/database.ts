@@ -3,10 +3,19 @@
  * `supabase gen types typescript` para el esquema `public`.
  *
  * Se mantienen a mano para reflejar exactamente el esquema descrito
- * en el catálogo (brands, categories, products, product_price_history,
- * store_locations). Si el esquema cambia, regenerar con la Supabase CLI:
+ * en el catálogo (profiles, brands, categories, products,
+ * product_price_history, store_locations). Si el esquema cambia, regenerar
+ * con la Supabase CLI:
  *
  *   supabase gen types typescript --project-id <project-id> > lib/types/database.ts
+ *
+ * `Relationships: []` en cada tabla no es adorno: supabase-js exige esa clave
+ * para que el esquema encaje en su `GenericTable`. Sin ella, todo el esquema
+ * degrada a `any` en silencio —los `select()` siguen compilando, pero
+ * `insert()` resuelve a `never` y no se puede usar—. Va vacío porque los
+ * `select()` con recursos embebidos (`brand:brands(...)`) ya se castean a
+ * mano a los tipos de `lib/types/index.ts`, así que no dependemos del
+ * inferidor de relaciones.
  */
 
 export type Json =
@@ -20,6 +29,17 @@ export type Json =
 export interface Database {
   public: {
     Tables: {
+      profiles: {
+        Row: {
+          id: string;
+          email: string;
+          role: "user" | "admin";
+          created_at: string;
+        };
+        Insert: Partial<Database["public"]["Tables"]["profiles"]["Row"]>;
+        Update: Partial<Database["public"]["Tables"]["profiles"]["Row"]>;
+        Relationships: [];
+      };
       brands: {
         Row: {
           id: string;
@@ -33,6 +53,7 @@ export interface Database {
         };
         Insert: Partial<Database["public"]["Tables"]["brands"]["Row"]>;
         Update: Partial<Database["public"]["Tables"]["brands"]["Row"]>;
+        Relationships: [];
       };
       categories: {
         Row: {
@@ -43,6 +64,7 @@ export interface Database {
         };
         Insert: Partial<Database["public"]["Tables"]["categories"]["Row"]>;
         Update: Partial<Database["public"]["Tables"]["categories"]["Row"]>;
+        Relationships: [];
       };
       products: {
         Row: {
@@ -70,6 +92,7 @@ export interface Database {
         };
         Insert: Partial<Database["public"]["Tables"]["products"]["Row"]>;
         Update: Partial<Database["public"]["Tables"]["products"]["Row"]>;
+        Relationships: [];
       };
       product_price_history: {
         Row: {
@@ -85,6 +108,7 @@ export interface Database {
         Update: Partial<
           Database["public"]["Tables"]["product_price_history"]["Row"]
         >;
+        Relationships: [];
       };
       store_locations: {
         Row: {
@@ -103,6 +127,7 @@ export interface Database {
         Update: Partial<
           Database["public"]["Tables"]["store_locations"]["Row"]
         >;
+        Relationships: [];
       };
     };
     Views: Record<string, never>;

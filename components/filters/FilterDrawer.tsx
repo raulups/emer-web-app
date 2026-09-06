@@ -1,10 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
 import type { Brand, Category, CategoryNode } from "@/lib/types";
 import type { ProductFilters } from "@/lib/types/filters";
-import { DUR, EASE, EASE_OUT } from "@/lib/motion";
+import { padCount } from "@/lib/utils/format";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { Button } from "@/components/ui/Button";
 import { AnimatedCounter } from "@/components/ui/AnimatedCounter";
@@ -50,12 +49,19 @@ function draftFromCommitted(filters: ProductFilters): DraftFilters {
 }
 
 /**
- * Panel de filtros deslizante desde la derecha (overlay a pantalla completa
- * en mobile), con secciones en acordeón. Los cambios se acumulan en un
- * estado local ("draft") — no tocan la URL hasta pulsar "Ver X resultados"
- * (o "Borrar filtros", que limpia y aplica de golpe). Mientras tanto, el
- * contador del footer se actualiza en vivo contra Supabase (con debounce),
- * para previsualizar cuántos resultados daría el draft antes de aplicarlo.
+ * Panel de filtros. En desktop (`lg`) es el sidebar sticky del handoff, a la
+ * izquierda del grid y siempre visible; por debajo, un drawer que entra por
+ * la derecha (`open`/`onClose`), porque el panel plegable en flujo del
+ * prototipo empujaría el grid entero hacia abajo en cada apertura.
+ *
+ * Un solo árbol para ambos: el mismo nodo cambia de `fixed` + translate a
+ * `static` con las utilidades `lg:`. Por eso la entrada/salida del drawer
+ * va en transición CSS y no en Framer — Framer animaría `x` también en
+ * desktop, donde el panel tiene que quedarse quieto.
+ *
+ * Los cambios se acumulan en un estado local ("draft") — no tocan la URL
+ * hasta pulsar "Ver X resultados" (o "Borrar filtros"). Mientras tanto, el
+ * contador del footer se actualiza en vivo contra Supabase (con debounce).
  */
 export function FilterDrawer({
   open,
@@ -74,12 +80,12 @@ export function FilterDrawer({
   const [liveCount, setLiveCount] = useState<number | null>(null);
   const [isCounting, setIsCounting] = useState(false);
 
-  // Reinicia el draft al valor comprometido (URL) cada vez que el drawer se
-  // abre, para que refleje el estado real si se había cerrado sin aplicar.
+  // Reinicia el draft al valor comprometido (URL) cuando cambian los
+  // filtros aplicados (chips, borrar) o al abrir el drawer móvil, para que
+  // el panel refleje siempre el estado real.
   useEffect(() => {
-    if (open) setDraft(draftFromCommitted(committedFilters));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+    setDraft(draftFromCommitted(committedFilters));
+  }, [committedFilters]);
 
   useEffect(() => {
     if (!open) return;
@@ -101,7 +107,6 @@ export function FilterDrawer({
   const debouncedDraft = useDebouncedValue(draft, 300);
 
   useEffect(() => {
-    if (!open) return;
     let cancelled = false;
     setIsCounting(true);
 
@@ -138,7 +143,7 @@ export function FilterDrawer({
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, debouncedDraft, committedFilters.gender, committedFilters.brandId]);
+  }, [debouncedDraft, committedFilters.gender, committedFilters.brandId]);
 
   const hasDraftFilters = useMemo(
     () =>
@@ -152,9 +157,13 @@ export function FilterDrawer({
     [draft],
   );
 
-  function handleApply() {
-    onApply(draft);
-  }
+  const draftCount =
+    (draft.search ? 1 : 0) +
+    (draft.categoryId ? 1 : 0) +
+    (draft.minPrice !== undefined || draft.maxPrice !== undefined ? 1 : 0) +
+    (draft.available ? 1 : 0) +
+    (draft.onSale ? 1 : 0) +
+    (lockedBrandId ? 0 : (draft.brandIds?.length ?? 0));
 
   function handleClear() {
     setDraft({});
@@ -162,158 +171,140 @@ export function FilterDrawer({
   }
 
   return (
-    <AnimatePresence>
-      {open ? (
-        <>
-          <motion.div
-            key="backdrop"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0, transition: { duration: DUR.fast, ease: EASE_OUT } }}
-            transition={{ duration: DUR.base, ease: EASE }}
-            onClick={onClose}
-            className="fixed inset-0 z-40 bg-ink/40"
-            aria-hidden
-          />
-          <motion.div
-            key="panel"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Filtrar y ordenar"
-            initial={{ x: "100%" }}
-            animate={{ x: 0 }}
-            exit={{ x: "100%", transition: { duration: DUR.fast, ease: EASE_OUT } }}
-            transition={{ duration: DUR.base, ease: EASE }}
-            className="fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col border-l border-line bg-paper"
-          >
-            <div className="flex shrink-0 items-center justify-between border-b border-line px-5 py-5">
-              <h2 className="text-ui uppercase tracking-ui text-ink">
-                Filtrar y ordenar
-              </h2>
-              <button
-                type="button"
-                onClick={onClose}
-                aria-label="Cerrar filtros"
-                className="flex h-8 w-8 items-center justify-center text-ink transition-opacity duration-fast ease-zara hover:opacity-60"
-              >
-                <CloseIcon />
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto px-5">
-              <div className="py-5">
-                <SearchInput
-                  value={draft.search ?? ""}
-                  onChange={(value) =>
-                    setDraft((d) => ({ ...d, search: value || undefined }))
-                  }
-                />
-              </div>
-
-              <AccordionSection title="Categoría" index={1} defaultOpen>
-                <CategoryTreeFilter
-                  tree={categoryTree}
-                  value={draft.categoryId ?? ""}
-                  onChange={(value) =>
-                    setDraft((d) => ({ ...d, categoryId: value || undefined }))
-                  }
-                />
-              </AccordionSection>
-
-              <AccordionSection title="Precio" index={2}>
-                <PriceRangeSlider
-                  min={draft.minPrice}
-                  max={draft.maxPrice}
-                  onChange={({ min, max }) =>
-                    setDraft((d) => ({ ...d, minPrice: min, maxPrice: max }))
-                  }
-                />
-              </AccordionSection>
-
-              <AccordionSection title="Disponibilidad" index={3}>
-                <ToggleFilter
-                  label="Solo disponibles"
-                  active={draft.available === true}
-                  onToggle={() =>
-                    setDraft((d) => ({
-                      ...d,
-                      available: d.available === true ? undefined : true,
-                    }))
-                  }
-                />
-              </AccordionSection>
-
-              <AccordionSection title="Oferta" index={4}>
-                <ToggleFilter
-                  label="Solo rebajas"
-                  active={draft.onSale === true}
-                  onToggle={() =>
-                    setDraft((d) => ({
-                      ...d,
-                      onSale: d.onSale === true ? undefined : true,
-                    }))
-                  }
-                />
-              </AccordionSection>
-
-              {!lockedBrandId && brands ? (
-                <AccordionSection
-                  title="Marca"
-                  index={5}
-                  badge={
-                    draft.brandIds && draft.brandIds.length > 0 ? (
-                      <span className="border border-ink px-1.5 text-ui tracking-ui text-ink">
-                        {draft.brandIds.length}
-                      </span>
-                    ) : null
-                  }
-                >
-                  <BrandChecklist
-                    brands={brands}
-                    selected={draft.brandIds ?? []}
-                    onChange={(ids) => setDraft((d) => ({ ...d, brandIds: ids }))}
-                  />
-                </AccordionSection>
-              ) : null}
-            </div>
-
-            <div className="flex shrink-0 items-center justify-between gap-4 border-t border-line px-5 py-5">
-              <Button
-                variant="link"
-                onClick={handleClear}
-                disabled={!hasDraftFilters}
-              >
-                Borrar filtros
-              </Button>
-              {/* Excepción funcional al lenguaje editorial: relleno sólido. */}
-              <Button variant="solid" onClick={handleApply} className="flex-1">
-                Ver{" "}
-                {liveCount === null ? (
-                  "…"
-                ) : (
-                  <span className={isCounting ? "opacity-50" : ""}>
-                    <AnimatedCounter value={liveCount} />
-                  </span>
-                )}{" "}
-                resultados
-              </Button>
-            </div>
-          </motion.div>
-        </>
-      ) : null}
-    </AnimatePresence>
-  );
-}
-
-function CloseIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
-      <path
-        d="M1 1L13 13M13 1L1 13"
-        stroke="currentColor"
-        strokeWidth="1.3"
-        strokeLinecap="round"
+    <>
+      {/* Fondo del drawer móvil. */}
+      <div
+        onClick={onClose}
+        aria-hidden
+        className={`fixed inset-0 z-40 bg-ink/60 backdrop-blur-[6px] transition-opacity duration-base ease-zara lg:hidden ${
+          open ? "opacity-100" : "pointer-events-none opacity-0"
+        }`}
       />
-    </svg>
+
+      <aside
+        role={open ? "dialog" : undefined}
+        aria-modal={open ? "true" : undefined}
+        aria-label="Filtros"
+        className={`fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col border-l border-line bg-paper transition-transform duration-base ease-zara lg:sticky lg:inset-auto lg:top-header lg:z-auto lg:max-h-[calc(100vh-var(--header-h))] lg:w-auto lg:max-w-none lg:translate-x-0 lg:border-l-0 lg:border-r ${
+          open ? "translate-x-0" : "translate-x-full"
+        }`}
+      >
+        <div className="mono flex shrink-0 items-center justify-between gap-3 border-b border-line px-5 py-4 tracking-mono-wide">
+          <span>Filtros / {padCount(draftCount)}</span>
+          <button
+            type="button"
+            onClick={handleClear}
+            disabled={!hasDraftFilters}
+            className="link-quiet hidden text-text-3 hover:text-ink disabled:opacity-40 lg:block"
+          >
+            Reset
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Cerrar filtros"
+            className="link-quiet flex h-11 w-11 items-center justify-center text-[15px] text-ink lg:hidden"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-5">
+          <div className="py-5">
+            <SearchInput
+              value={draft.search ?? ""}
+              onChange={(value) =>
+                setDraft((d) => ({ ...d, search: value || undefined }))
+              }
+            />
+          </div>
+
+          <AccordionSection title="Categoría" index={1} defaultOpen>
+            <CategoryTreeFilter
+              tree={categoryTree}
+              value={draft.categoryId ?? ""}
+              onChange={(value) =>
+                setDraft((d) => ({ ...d, categoryId: value || undefined }))
+              }
+            />
+          </AccordionSection>
+
+          <AccordionSection title="Precio" index={2}>
+            <PriceRangeSlider
+              min={draft.minPrice}
+              max={draft.maxPrice}
+              onChange={({ min, max }) =>
+                setDraft((d) => ({ ...d, minPrice: min, maxPrice: max }))
+              }
+            />
+          </AccordionSection>
+
+          <AccordionSection title="Disponibilidad" index={3} defaultOpen>
+            <div className="flex flex-col gap-2">
+              <ToggleFilter
+                label="Solo disponibles"
+                active={draft.available === true}
+                onToggle={() =>
+                  setDraft((d) => ({
+                    ...d,
+                    available: d.available === true ? undefined : true,
+                  }))
+                }
+              />
+              <ToggleFilter
+                label="Solo rebajas"
+                active={draft.onSale === true}
+                onToggle={() =>
+                  setDraft((d) => ({
+                    ...d,
+                    onSale: d.onSale === true ? undefined : true,
+                  }))
+                }
+              />
+            </div>
+          </AccordionSection>
+
+          {!lockedBrandId && brands ? (
+            <AccordionSection
+              title="Marca"
+              index={4}
+              badge={
+                draft.brandIds && draft.brandIds.length > 0
+                  ? padCount(draft.brandIds.length)
+                  : null
+              }
+            >
+              <BrandChecklist
+                brands={brands}
+                selected={draft.brandIds ?? []}
+                onChange={(ids) => setDraft((d) => ({ ...d, brandIds: ids }))}
+              />
+            </AccordionSection>
+          ) : null}
+        </div>
+
+        <div className="flex shrink-0 items-center justify-between gap-4 border-t border-line px-5 py-4">
+          <Button
+            variant="link"
+            onClick={handleClear}
+            disabled={!hasDraftFilters}
+            className="lg:hidden"
+          >
+            Borrar
+          </Button>
+          <Button variant="solid" onClick={() => onApply(draft)} className="flex-1">
+            Ver{" "}
+            {liveCount === null ? (
+              "…"
+            ) : (
+              <span className={isCounting ? "opacity-50" : ""}>
+                <AnimatedCounter value={liveCount} />
+              </span>
+            )}{" "}
+            resultados
+          </Button>
+        </div>
+      </aside>
+    </>
   );
 }

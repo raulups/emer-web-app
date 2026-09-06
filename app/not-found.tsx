@@ -1,22 +1,19 @@
 import Link from "next/link";
-import { PageContainer } from "@/components/layout/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 
 export default function NotFound() {
   return (
-    <PageContainer>
-      <EmptyState
-        title="No encontrado"
-        description="El contenido que buscas no existe o ha sido eliminado."
-      />
-      <div className="mt-6 text-center">
+    <EmptyState
+      title="No encontrado"
+      description="El contenido que buscas no existe o ha sido eliminado"
+      action={
         <Link
           href="/"
-          className="link-underline text-ui uppercase tracking-ui text-ink"
+          className="mono inline-flex min-h-cta items-center gap-3 bg-ink px-6 py-3 text-fg-inverse transition-colors duration-fast ease-zara hover:bg-fg-hover"
         >
-          Volver al inicio
+          Volver al directorio <span aria-hidden>→</span>
         </Link>
-      </div>
-    </PageContainer>
+      }
+    />
   );
 }

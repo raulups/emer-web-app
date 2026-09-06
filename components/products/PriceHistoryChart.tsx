@@ -38,27 +38,32 @@ export function PriceHistoryChart({ history }: PriceHistoryChartProps) {
   const last = history[history.length - 1];
 
   return (
-    <div>
-      <p className="text-ui uppercase tracking-ui text-ink">
-        Histórico de precio
-      </p>
+    <div className="flex flex-col gap-3 border-t border-line pt-5">
+      <p className="mono tracking-mono-wide text-text-3">Histórico de precio</p>
       <svg
         viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
-        className="mt-3 w-full text-ink"
+        className="w-full text-ink"
         role="img"
         aria-label="Histórico de precio del producto"
       >
         <path d={pathD} fill="none" stroke="currentColor" strokeWidth={1.5} />
         {points.map((p) => (
-          <circle key={p.entry.id} cx={p.x} cy={p.y} r={2.5} fill="currentColor">
+          <rect
+            key={p.entry.id}
+            x={p.x - 2.5}
+            y={p.y - 2.5}
+            width={5}
+            height={5}
+            fill="currentColor"
+          >
             <title>
               {formatDate(p.entry.scraped_at)} — {formatPrice(p.entry.price, p.entry.currency)}
             </title>
-          </circle>
+          </rect>
         ))}
       </svg>
       {first && last ? (
-        <div className="mt-1 flex justify-between text-ui text-muted-text">
+        <div className="mono flex justify-between text-text-3">
           <span>{formatDate(first.scraped_at)}</span>
           <span>{formatDate(last.scraped_at)}</span>
         </div>

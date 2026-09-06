@@ -11,9 +11,10 @@ import {
   getProductsPage,
 } from "@/lib/supabase/queries";
 import { parseProductFilters, type FilterSearchParams } from "@/lib/types/filters";
-import { PageContainer } from "@/components/layout/PageContainer";
+import { padCount } from "@/lib/utils/format";
 import { ProductsExplorer } from "@/components/products/ProductsExplorer";
 import { ProductsExplorerSkeleton } from "@/components/products/ProductsExplorerSkeleton";
+import { Skeleton } from "@/components/ui/Skeleton";
 
 export const metadata: Metadata = { title: "Productos" };
 
@@ -21,26 +22,46 @@ interface ProductsPageProps {
   searchParams: FilterSearchParams;
 }
 
+/**
+ * Catálogo global (Vista 3 del handoff): cabecera con el titular gigante
+ * y la meta mono a la derecha; debajo, sidebar + rejilla.
+ */
 export default function ProductsPage({ searchParams }: ProductsPageProps) {
   return (
-    <PageContainer>
-      <div className="mb-10 border-b border-line pb-8">
-        <h1 className="font-display text-4xl tracking-display text-ink sm:text-6xl">
-          Productos
-        </h1>
-      </div>
+    <div>
       {/*
         Suspense deja pintar el título antes de esperar a Supabase, solo en
         la primera carga real de la ruta. Los cambios de filtro navegan vía
         useProductFilters con `startTransition`, así que React NO vuelve a
-        mostrar este fallback en cada cambio (mantiene el árbol montado con
-        isPending=true) — el feedback de esos cambios es el overlay de
-        ProductsExplorer, no este skeleton.
+        mostrar este fallback en cada cambio — el feedback de esos cambios
+        es el overlay de ProductsExplorer, no este skeleton.
       */}
-      <Suspense fallback={<ProductsExplorerSkeleton />}>
+      <Suspense fallback={<ProductsPageSkeleton />}>
         <ProductsData searchParams={searchParams} />
       </Suspense>
-    </PageContainer>
+    </div>
+  );
+}
+
+function CatalogHeader({ meta }: { meta: React.ReactNode }) {
+  return (
+    <section className="grid items-end gap-[clamp(14px,3vw,28px)] border-b border-line px-page pb-bar pt-[clamp(34px,6vw,54px)] lg:grid-cols-[minmax(0,1fr)_auto]">
+      <h1 className="display text-fluid-view tracking-display">
+        Todos los
+        <br />
+        productos
+      </h1>
+      <div className="mono text-text-3 lg:text-right">{meta}</div>
+    </section>
+  );
+}
+
+function ProductsPageSkeleton() {
+  return (
+    <div>
+      <CatalogHeader meta={<Skeleton className="h-4 w-48" />} />
+      <ProductsExplorerSkeleton />
+    </div>
   );
 }
 
@@ -68,15 +89,20 @@ async function ProductsData({ searchParams }: ProductsPageProps) {
   const categoryTree = buildCategoryTree(categories);
 
   return (
-    <ProductsExplorer
-      categoryTree={categoryTree}
-      categories={categories}
-      brands={brands}
-      initialItems={items}
-      initialHasMore={hasMore}
-      totalCount={totalCount}
-      categoryIds={categoryIds}
-      showBrand
-    />
+    <div>
+      <CatalogHeader
+        meta={`Índice global · ${padCount(brands.length)} ${brands.length === 1 ? "marca" : "marcas"}`}
+      />
+      <ProductsExplorer
+        categoryTree={categoryTree}
+        categories={categories}
+        brands={brands}
+        initialItems={items}
+        initialHasMore={hasMore}
+        totalCount={totalCount}
+        categoryIds={categoryIds}
+        showBrand
+      />
+    </div>
   );
 }

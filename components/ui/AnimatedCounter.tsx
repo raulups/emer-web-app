@@ -3,13 +3,16 @@
 import { useEffect, useRef, useState } from "react";
 import { animate } from "framer-motion";
 import { DUR, EASE } from "@/lib/motion";
+import { padCount } from "@/lib/utils/format";
 
 interface AnimatedCounterProps {
   value: number;
+  /** A dos dígitos ("04"), el formato de los contadores del handoff. */
+  pad?: boolean;
 }
 
 /** Número que hace un conteo animado hacia el nuevo valor en vez de saltar. */
-export function AnimatedCounter({ value }: AnimatedCounterProps) {
+export function AnimatedCounter({ value, pad = false }: AnimatedCounterProps) {
   const [display, setDisplay] = useState(value);
   const previousValue = useRef(value);
 
@@ -23,5 +26,5 @@ export function AnimatedCounter({ value }: AnimatedCounterProps) {
     return () => controls.stop();
   }, [value]);
 
-  return <span>{display}</span>;
+  return <span>{pad ? padCount(display) : display}</span>;
 }

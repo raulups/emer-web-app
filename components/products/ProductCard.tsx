@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type MouseEvent } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import type { ProductListItem } from "@/lib/types";
@@ -18,9 +18,17 @@ interface ProductCardProps {
 }
 
 /**
- * Card de producto: imagen a sangre (100% del contenedor, sin padding
- * interno) y el texto siempre DEBAJO, fuera de la imagen. Lo único que se
- * superpone es el chip de rebaja y el botón de compra directa.
+ * Card de producto: imagen 3/4 sobre --muted-bg, en b/n que pasa a color y
+ * hace zoom 1.04 al hover, con una barra de dos acciones subiendo desde
+ * abajo — "Ver pieza" (el destino de la propia card, en papel con borde) y
+ * "Comprar ahora" (bloque negro, abre `product_url` en pestaña nueva). Pie
+ * con línea mono (marca), nombre en Archivo 700 y precio mono. Bordes
+ * derecho e inferior de 1px: la rejilla continua se forma con ellos.
+ *
+ * "Comprar ahora" es un <button> anidado en el <Link> de la card (un <a>
+ * dentro de otro sería HTML inválido), por eso frena el evento con
+ * preventDefault/stopPropagation. En dispositivos sin puntero la barra se
+ * ve siempre: no hay hover que la descubra.
  */
 export function ProductCard({
   product,
@@ -34,6 +42,13 @@ export function ProductCard({
   const secondImage =
     gallery.find((url) => url && url !== product.main_image_url) ?? null;
 
+  function openStore(event: MouseEvent<HTMLButtonElement>) {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!product.product_url) return;
+    window.open(product.product_url, "_blank", "noopener,noreferrer");
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: ENTER_Y }}
@@ -43,32 +58,28 @@ export function ProductCard({
         delay: staggerDelay(index),
         ease: EASE,
       }}
+      className="border-b border-r border-line"
     >
       <Link
         href={`/products/${product.id}${genderQuery}`}
-        className="group block"
+        className="group flex h-full flex-col bg-paper"
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
       >
         <div className="relative aspect-[3/4] w-full overflow-hidden bg-subtle">
-          {/* Zoom máximo del sistema: 1.02. */}
-          <div
-            className={`absolute inset-0 transition-transform duration-slow ease-zara ${
-              hovered ? "scale-[1.02]" : "scale-100"
-            }`}
-          >
+          <div className="photo-reveal absolute inset-0 transition-transform duration-zoom ease-zara group-hover:scale-[1.04]">
             {product.main_image_url ? (
               <FadeInImage
                 src={product.main_image_url}
                 alt={product.name}
                 fill
-                sizes="(min-width: 1024px) 33vw, 50vw"
+                sizes="(min-width: 1024px) 25vw, 50vw"
                 className="object-cover"
                 visible={!(hovered && secondImage)}
               />
             ) : (
-              <div className="flex h-full w-full items-center justify-center text-ui uppercase tracking-ui text-muted-text">
-                Sin imagen
+              <div className="placeholder-light absolute inset-0 flex items-center justify-center p-5 text-center">
+                <span className="mono text-text-3">Sin foto</span>
               </div>
             )}
             {secondImage ? (
@@ -77,7 +88,7 @@ export function ProductCard({
                 alt=""
                 aria-hidden
                 fill
-                sizes="(min-width: 1024px) 33vw, 50vw"
+                sizes="(min-width: 1024px) 25vw, 50vw"
                 className="absolute inset-0 object-cover"
                 visible={hovered}
                 showPlaceholder={false}
@@ -85,72 +96,50 @@ export function ProductCard({
             ) : null}
           </div>
 
-          <div className="absolute left-3 top-3 flex flex-col items-start gap-1.5">
+          <div className="absolute left-2.5 top-2.5 flex flex-col items-start gap-1.5">
             {product.is_on_sale ? <Badge tone="sale">Rebaja</Badge> : null}
             {product.available === false ? (
               <Badge tone="unavailable">Agotado</Badge>
             ) : null}
           </div>
 
-          {product.product_url ? (
-            <div className="absolute bottom-3 right-3 opacity-100 transition-opacity duration-base ease-zara md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100">
+          {/* Barra de acciones: sube al hover o al enfocar el botón por teclado. */}
+          <div className="absolute inset-x-0 bottom-0 grid translate-y-full grid-cols-[1fr_auto] border-t border-ink transition-transform duration-base ease-zara group-hover:translate-y-0 group-focus-within:translate-y-0 touch:translate-y-0">
+            <span className="mono flex min-h-hit items-center justify-center bg-paper px-3 text-ink">
+              Ver pieza <span aria-hidden>&nbsp;→</span>
+            </span>
+            {product.product_url ? (
               <button
                 type="button"
-                aria-label={`Ir a la tienda: ${product.name}`}
-                onClick={(event) => {
-                  event.preventDefault();
-                  event.stopPropagation();
-                  window.open(
-                    product.product_url ?? "",
-                    "_blank",
-                    "noopener,noreferrer",
-                  );
-                }}
-                className="flex h-10 items-center gap-2 border border-ink bg-ink px-3 text-ui uppercase tracking-ui text-fg-inverse transition-colors duration-fast ease-zara hover:bg-paper hover:text-ink"
+                onClick={openStore}
+                aria-label={`Comprar ahora en la web oficial: ${product.name}`}
+                className="mono flex min-h-hit items-center justify-center gap-2 border-l border-ink bg-ink px-3 text-fg-inverse transition-colors duration-fast ease-zara hover:bg-fg-hover"
               >
-                <BagIcon />
-                <span className="hidden lg:inline">Ir a la tienda</span>
+                Comprar ahora <span aria-hidden>↗</span>
               </button>
-            </div>
-          ) : null}
+            ) : null}
+          </div>
         </div>
 
-        <div className="mt-4 space-y-1.5">
+        <div className="flex flex-1 flex-col gap-2 p-4 pb-5">
           {showBrand && product.brand ? (
-            <p className="text-ui uppercase tracking-ui text-muted-text">
-              {product.brand.name}
-            </p>
+            <p className="mono text-text-3">{product.brand.name}</p>
           ) : null}
-          {/* Peso ligero (300) reservado a nombres de producto. */}
-          <h3 className="text-ui font-light uppercase tracking-ui text-ink">
-            {product.name}
-          </h3>
-          <PriceTag
-            currentPrice={product.current_price}
-            originalPrice={product.original_price}
-            currency={product.currency}
-            isOnSale={product.is_on_sale}
-          />
+          <div className="flex items-baseline justify-between gap-2.5">
+            <h3 className="text-fluid-name font-bold uppercase tracking-name text-ink">
+              {product.name}
+            </h3>
+            <div className="shrink-0">
+              <PriceTag
+                currentPrice={product.current_price}
+                originalPrice={product.original_price}
+                currency={product.currency}
+                isOnSale={product.is_on_sale}
+              />
+            </div>
+          </div>
         </div>
       </Link>
     </motion.div>
-  );
-}
-
-function BagIcon() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden>
-      <path
-        d="M3.5 4.5h8l0.5 8.5h-9l0.5-8.5Z"
-        stroke="currentColor"
-        strokeWidth="1.1"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M5.5 4.5v-1a2 2 0 0 1 4 0v1"
-        stroke="currentColor"
-        strokeWidth="1.1"
-      />
-    </svg>
   );
 }

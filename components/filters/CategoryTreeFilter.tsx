@@ -4,6 +4,7 @@ import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import type { CategoryNode } from "@/lib/types";
 import { DUR, EASE } from "@/lib/motion";
+import { Checkbox } from "./Checkbox";
 
 interface CategoryTreeFilterProps {
   tree: CategoryNode[];
@@ -68,19 +69,9 @@ function CategoryTreeNode({
             onClick={() => setExpanded((e) => !e)}
             aria-expanded={expanded}
             aria-label={`${expanded ? "Colapsar" : "Expandir"} ${node.name}`}
-            className="flex h-8 w-8 shrink-0 items-center justify-center text-muted-text transition-colors duration-fast ease-zara hover:text-ink"
+            className="mono flex h-[34px] w-8 shrink-0 items-center justify-center text-text-3 transition-colors duration-fast ease-zara hover:text-ink"
           >
-            <motion.svg
-              animate={{ rotate: expanded ? 180 : 0 }}
-              transition={{ duration: DUR.fast, ease: EASE }}
-              width="9"
-              height="6"
-              viewBox="0 0 10 6"
-              fill="none"
-              aria-hidden
-            >
-              <path d="M1 1L5 5L9 1" stroke="currentColor" strokeWidth="1.5" />
-            </motion.svg>
+            <span aria-hidden>{expanded ? "—" : "+"}</span>
           </button>
         ) : null}
       </div>
@@ -127,16 +118,10 @@ function CategoryOption({
       type="button"
       onClick={onSelect}
       aria-pressed={selected}
-      className="flex flex-1 items-center gap-3 py-2 text-left text-ui text-ink"
+      className="flex min-h-[34px] flex-1 items-center gap-[11px] text-left text-ui uppercase tracking-[0.02em] transition-opacity duration-fast ease-zara hover:opacity-60"
     >
-      {/* Marca cuadrada, coherente con --radius: 0. */}
-      <span
-        aria-hidden
-        className={`h-3 w-3 shrink-0 border transition-colors duration-fast ease-zara ${
-          selected ? "border-ink bg-ink" : "border-line"
-        }`}
-      />
-      <span className={selected ? "text-ink" : "text-muted-text"}>{label}</span>
+      <Checkbox checked={selected} />
+      <span className={selected ? "text-ink" : "text-text-2"}>{label}</span>
     </button>
   );
 }
